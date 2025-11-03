@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSupabase } from '@/components/Providers'
-import CreateGame from './CreateGame'
+import CreateGame from '@/components/CreateGame'
+import JoinGame from '@/components/JoinGame'
 
 interface Game {
   id: string
@@ -19,6 +20,13 @@ export default function DashboardPage() {
 
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const copyGameId = (id: string) => {
+    navigator.clipboard.writeText(id)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
   // Redirection si pas connecté
   useEffect(() => {
@@ -51,6 +59,12 @@ export default function DashboardPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">🎲 Mes Parties</h1>
         <CreateGame />
+      </div>
+
+      {/* Section pour rejoindre une partie */}
+      <div className="card bg-base-200 p-6">
+        <h2 className="text-xl font-semibold mb-4">Rejoindre une partie existante</h2>
+        <JoinGame />
       </div>
 
       {games.length === 0 ? (
@@ -88,7 +102,14 @@ export default function DashboardPage() {
                   </td>
                   <td>{g.winner ?? '-'}</td>
                   <td>{new Date(g.created_at).toLocaleString('fr-FR')}</td>
-                  <td>
+                  <td className="flex gap-2">
+                    <button
+                      onClick={() => copyGameId(g.id)}
+                      className="btn btn-sm btn-ghost"
+                      title="Copier le code"
+                    >
+                      {copiedId === g.id ? '✓' : '📋'}
+                    </button>
                     <button
                       onClick={() => router.push(`/game/${g.id}`)}
                       className="btn btn-sm btn-outline"
