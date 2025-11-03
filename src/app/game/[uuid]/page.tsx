@@ -24,6 +24,8 @@ export default function GamePage() {
   const [gameEnded, setGameEnded] = useState(false)
   const [endMessage, setEndMessage] = useState('')
   const [gameState, setGameState] = useState<GameState | null>(null)
+  const [isRolling, setIsRolling] = useState(false)
+  const [rollCount, setRollCount] = useState(0)
   const socketRef = useRef<Socket | null>(null)
   const isConnectingRef = useRef(false)
 
@@ -114,6 +116,7 @@ export default function GamePage() {
 
       newSocket.on('game_update', (updatedState: GameState) => {
         setGameState(updatedState)
+        setIsRolling(false)
         console.log('🔄 État du jeu mis à jour', updatedState)
       })
 
@@ -177,7 +180,10 @@ export default function GamePage() {
   // Actions de jeu
   const handleRollDice = () => {
     if (socketRef.current && gameState) {
+      setIsRolling(true)
+      setRollCount(prev => prev + 1)
       socketRef.current.emit('roll_dice', uuid)
+      // L'animation se terminera quand on recevra game_update
     }
   }
 
@@ -318,7 +324,9 @@ export default function GamePage() {
                 <Dice 
                   dice={gameState.dice}
                   onToggleLock={handleToggleDieLock}
-                  canRoll={gameState.rollsLeft > 0}
+                  canRoll={gameState.rollsLeft < 3 && gameState.rollsLeft > 0}
+                  isRolling={isRolling}
+                  rollCount={rollCount}
                 />
                 
                 <button
@@ -330,7 +338,10 @@ export default function GamePage() {
                 </button>
                 
                 <p className="text-xs text-base-content/60 mt-2">
-                  Cliquez sur les dés pour les verrouiller/déverrouiller
+                  {gameState.rollsLeft === 3 
+                    ? 'Lancez les dés pour commencer votre tour'
+                    : 'Cliquez sur les dés pour les verrouiller/déverrouiller'
+                  }
                 </p>
               </div>
             </div>
