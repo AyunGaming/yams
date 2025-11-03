@@ -2,6 +2,8 @@ import { createServer } from 'http'
 import { parse } from 'url'
 import next from 'next'
 import { Server as IOServer } from 'socket.io'
+import { initializeGame, rollDice, toggleDieLock, chooseScore } from './src/server/gameManager'
+import { ScoreCategory } from './src/types/game'
 
 const dev = process.env.NODE_ENV !== 'production'
 const hostname = 'localhost'
@@ -71,8 +73,27 @@ app.prepare().then(() => {
       // Marquer que la partie a démarré
       roomStates.set(roomId, { started: true })
       
-      io.to(roomId).emit('game_started')
-      console.log(`✅ Partie démarrée dans la room ${roomId}`)
+      // Récupérer les joueurs de la room
+      const room = io.sockets.adapter.rooms.get(roomId)
+      const socketsInRoom = room ? Array.from(room) : []
+      
+      const players = socketsInRoom.map(socketId => {
+        const s = io.sockets.sockets.get(socketId)
+        return {
+          id: socketId,
+          name: s?.data?.playerName || 'Unknown',
+        }
+      })
+      
+      // Initialiser l'état du jeu
+      const gameState = initializeGame(roomId, players)
+      
+      console.log(`🎮 État du jeu initialisé:`, JSON.stringify(gameState, null, 2))
+      
+      // Émettre l'événement de démarrage avec l'état initial
+      io.to(roomId).emit('game_started', gameState)
+      console.log(`✅ Partie démarrée dans la room ${roomId} avec ${players.length} joueurs`)
+      console.log(`📤 Événement 'game_started' émis vers ${socketsInRoom.length} clients`)
     })
 
     // Fonction pour quitter la room (avant que la partie démarre)
@@ -163,6 +184,48 @@ app.prepare().then(() => {
           started: true,
         })
         io.to(roomId).emit('system_message', `La partie continue avec ${players.length} joueurs`)
+      }
+    })
+
+    // ========== Événements de jeu ==========
+
+    // Lancer les dés
+    socket.on('roll_dice', (roomId: string) => {
+      const gameState = rollDice(roomId)
+      if (gameState) {
+        io.to(roomId).emit('game_update', gameState)
+        console.log(`🎲 Dés lancés dans ${roomId}, lancers restants: ${gameState.rollsLeft}`)
+      }
+    })
+
+    // Verrouiller/déverrouiller un dé
+    socket.on('toggle_die_lock', ({ roomId, dieIndex }: { roomId: string; dieIndex: number }) => {
+      const gameState = toggleDieLock(roomId, dieIndex)
+      if (gameState) {
+        io.to(roomId).emit('game_update', gameState)
+        console.log(`🔒 Dé ${dieIndex} verrouillé/déverrouillé dans ${roomId}`)
+      }
+    })
+
+    // Choisir une catégorie de score
+    socket.on('choose_score', ({ roomId, category }: { roomId: string; category: ScoreCategory }) => {
+      const playerId = socket.id
+      const gameState = chooseScore(roomId, playerId, category)
+      
+      if (gameState) {
+        io.to(roomId).emit('game_update', gameState)
+        
+        if (gameState.gameStatus === 'finished') {
+          io.to(roomId).emit('game_ended', {
+            winner: gameState.winner,
+            reason: 'completed',
+            message: `${gameState.winner} remporte la partie !`,
+          })
+          console.log(`🏆 Partie terminée dans ${roomId}, gagnant: ${gameState.winner}`)
+        } else {
+          const currentPlayer = gameState.players[gameState.currentPlayerIndex]
+          io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
+        }
       }
     })
 

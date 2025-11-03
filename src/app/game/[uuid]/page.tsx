@@ -4,6 +4,9 @@ import { useEffect, useState, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useParams, useRouter } from 'next/navigation'
 import { useSupabase } from '@/components/Providers'
+import { GameState, ScoreCategory } from '@/types/game'
+import Dice from '@/components/game/Dice'
+import ScoreGrid from '@/components/game/ScoreGrid'
 
 type Player = { id: string; name: string }
 
@@ -20,6 +23,7 @@ export default function GamePage() {
   const [systemMessages, setSystemMessages] = useState<string[]>([])
   const [gameEnded, setGameEnded] = useState(false)
   const [endMessage, setEndMessage] = useState('')
+  const [gameState, setGameState] = useState<GameState | null>(null)
   const socketRef = useRef<Socket | null>(null)
   const isConnectingRef = useRef(false)
 
@@ -89,6 +93,11 @@ export default function GamePage() {
         })
       })
 
+      // Listener générique pour déboguer TOUS les événements
+      newSocket.onAny((eventName, ...args) => {
+        console.log(`🔔 Événement reçu: ${eventName}`, args)
+      })
+
       newSocket.on('room_update', (room: { players: Player[]; started: boolean }) => {
         setPlayers(room.players)
         setStarted(room.started)
@@ -96,9 +105,16 @@ export default function GamePage() {
         setIsHost(amIHost)
       })
 
-      newSocket.on('game_started', () => {
+      newSocket.on('game_started', (initialState: GameState) => {
+        console.log('📥 Événement game_started reçu:', initialState)
         setStarted(true)
-        console.log('🎮 Partie démarrée!')
+        setGameState(initialState)
+        console.log('✅ Partie démarrée! État mis à jour')
+      })
+
+      newSocket.on('game_update', (updatedState: GameState) => {
+        setGameState(updatedState)
+        console.log('🔄 État du jeu mis à jour', updatedState)
       })
 
       newSocket.on('system_message', (message: string) => {
@@ -156,6 +172,32 @@ export default function GamePage() {
       socketRef.current = null
     }
     router.push('/dashboard')
+  }
+
+  // Actions de jeu
+  const handleRollDice = () => {
+    if (socketRef.current && gameState) {
+      socketRef.current.emit('roll_dice', uuid)
+    }
+  }
+
+  const handleToggleDieLock = (dieIndex: number) => {
+    if (socketRef.current && gameState) {
+      socketRef.current.emit('toggle_die_lock', { roomId: uuid, dieIndex })
+    }
+  }
+
+  const handleChooseScore = (category: ScoreCategory) => {
+    if (socketRef.current && gameState) {
+      socketRef.current.emit('choose_score', { roomId: uuid, category })
+    }
+  }
+
+  // Helpers
+  const isMyTurn = () => {
+    if (!gameState || !socketRef.current) return false
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex]
+    return currentPlayer.id === socketRef.current.id
   }
 
   // affichage
@@ -221,13 +263,29 @@ export default function GamePage() {
   }
 
   // affichage quand la partie démarre
+  if (!gameState) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh]">
+        <span className="loading loading-spinner loading-lg"></span>
+        <p className="mt-4">Chargement du jeu...</p>
+      </div>
+    )
+  }
+
+  const currentPlayer = gameState.players[gameState.currentPlayerIndex]
+  const myTurn = isMyTurn()
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-6">
-      <h1 className="text-3xl font-bold mb-4">🎲 Partie en cours #{uuid}</h1>
+    <div className="container mx-auto p-4 space-y-6">
+      {/* En-tête */}
+      <div className="text-center">
+        <h1 className="text-2xl font-bold">🎲 Yams - Tour {gameState.turnNumber}/13</h1>
+        <p className="text-sm text-base-content/70">Partie #{uuid.slice(0, 8)}</p>
+      </div>
       
       {gameEnded ? (
         <div className="text-center space-y-4">
-          <div className="alert alert-success">
+          <div className="alert alert-success max-w-md mx-auto">
             <span className="text-lg">🏁 {endMessage}</span>
           </div>
           <button
@@ -239,21 +297,74 @@ export default function GamePage() {
         </div>
       ) : (
         <>
-          <div className="bg-base-200 p-6 rounded-lg w-full max-w-md">
-            <h3 className="font-semibold mb-3">Joueurs actifs :</h3>
-            <ul className="space-y-2">
-              {players.map((p) => (
-                <li key={p.id} className="flex items-center gap-2">
-                  <span className="badge badge-sm badge-primary">●</span>
-                  <span>{p.name}</span>
-                </li>
-              ))}
-            </ul>
+          {/* Info joueur actif */}
+          <div className={`alert ${myTurn ? 'alert-info' : 'alert-warning'} max-w-md mx-auto`}>
+            {myTurn ? (
+              <span>🎯 C&apos;est votre tour !</span>
+            ) : (
+              <span>⏳ Au tour de {currentPlayer.name}</span>
+            )}
           </div>
 
+          {/* Dés */}
+          {myTurn && (
+            <div className="card bg-base-200 max-w-2xl mx-auto">
+              <div className="card-body items-center">
+                <h3 className="card-title">Dés</h3>
+                <p className="text-sm text-base-content/70 mb-4">
+                  Lancers restants : {gameState.rollsLeft}
+                </p>
+                
+                <Dice 
+                  dice={gameState.dice}
+                  onToggleLock={handleToggleDieLock}
+                  canRoll={gameState.rollsLeft > 0}
+                />
+                
+                <button
+                  onClick={handleRollDice}
+                  disabled={gameState.rollsLeft === 0}
+                  className="btn btn-primary mt-4"
+                >
+                  {gameState.rollsLeft === 3 ? '🎲 Lancer les dés' : '🎲 Relancer'}
+                </button>
+                
+                <p className="text-xs text-base-content/60 mt-2">
+                  Cliquez sur les dés pour les verrouiller/déverrouiller
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Grilles de score */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-6xl mx-auto">
+            {gameState.players.map((player) => (
+              <div key={player.id}>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-bold">
+                    {player.name}
+                    {player.id === socketRef.current?.id && ' (Vous)'}
+                  </h3>
+                  <span className="badge badge-lg">
+                    Score: {player.totalScore}
+                  </span>
+                </div>
+                
+                <ScoreGrid
+                  scoreSheet={player.scoreSheet}
+                  currentDice={gameState.dice.map(d => d.value)}
+                  onChooseScore={handleChooseScore}
+                  isMyTurn={myTurn && player.id === socketRef.current?.id}
+                  canChoose={gameState.rollsLeft < 3}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Messages système */}
           {systemMessages.length > 0 && (
-            <div className="bg-info/20 p-3 rounded w-full max-w-md">
-              <p className="text-xs font-semibold mb-2">📢 Messages système :</p>
+            <div className="bg-info/20 p-3 rounded max-w-md mx-auto">
+              <p className="text-xs font-semibold mb-2">📢 Messages :</p>
               <div className="space-y-1 max-h-24 overflow-y-auto">
                 {systemMessages.slice(-3).map((msg, idx) => (
                   <p key={idx} className="text-xs text-base-content/80">
@@ -264,16 +375,15 @@ export default function GamePage() {
             </div>
           )}
 
-          <p className="text-sm text-base-content/70">
-            La partie est en cours... (Système de jeu à implémenter)
-          </p>
-
-          <button
-            onClick={handleLeave}
-            className="btn btn-outline btn-error"
-          >
-            🏳️ Abandonner la partie
-          </button>
+          {/* Bouton abandonner */}
+          <div className="text-center">
+            <button
+              onClick={handleLeave}
+              className="btn btn-outline btn-error btn-sm"
+            >
+              🏳️ Abandonner
+            </button>
+          </div>
         </>
       )}
     </div>
