@@ -34,6 +34,7 @@ export interface PlayerGameState {
   name: string
   scoreSheet: ScoreSheet
   totalScore: number
+  abandoned: boolean
 }
 
 export interface GameState {

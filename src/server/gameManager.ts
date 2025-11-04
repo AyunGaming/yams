@@ -1,7 +1,7 @@
 // Gestionnaire de l'état des parties côté serveur
 
-import { GameState, PlayerGameState, Die, ScoreCategory } from '../types/game'
-import { calculateScore, calculateTotalScore, createEmptyScoreSheet } from '../lib/yamsLogic'
+import { GameState, Die, ScoreCategory } from '../types/game'
+import { calculateScore, calculateTotalScore, createEmptyScoreSheet, isScoreSheetComplete } from '../lib/yamsLogic'
 
 // Stocker les états de jeu en mémoire
 const games = new Map<string, GameState>()
@@ -17,6 +17,7 @@ export function initializeGame(roomId: string, players: { id: string; name: stri
       name: p.name,
       scoreSheet: createEmptyScoreSheet(),
       totalScore: 0,
+      abandoned: false,
     })),
     currentPlayerIndex: 0,
     dice: createDice(),
@@ -99,6 +100,12 @@ export function chooseScore(
     return game
   }
   
+  // Vérifier que le joueur n'a pas abandonné
+  if (currentPlayer.abandoned) {
+    console.log('⚠️ Ce joueur a abandonné')
+    return game
+  }
+  
   // Vérifier que la catégorie n'est pas déjà remplie
   if (currentPlayer.scoreSheet[category] !== null) {
     console.log('⚠️ Cette catégorie est déjà remplie')
@@ -113,11 +120,12 @@ export function chooseScore(
   
   console.log(`✅ ${currentPlayer.name} a marqué ${score} dans ${category}`)
   
-  // Passer au joueur suivant
-  game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length
+  // Passer au joueur suivant actif (non-abandonné)
+  const oldIndex = game.currentPlayerIndex
+  game.currentPlayerIndex = getNextActivePlayerIndex(game)
   
   // Si on revient au premier joueur, on passe au tour suivant
-  if (game.currentPlayerIndex === 0) {
+  if (game.currentPlayerIndex <= oldIndex) {
     game.turnNumber++
   }
   
@@ -125,11 +133,14 @@ export function chooseScore(
   game.dice = createDice()
   game.rollsLeft = 3
   
-  // Vérifier si la partie est terminée (13 tours)
-  if (game.turnNumber > 13) {
+  // Vérifier si la partie est terminée (13 tours OU tous les joueurs actifs ont fini)
+  const activePlayers = game.players.filter(p => !p.abandoned)
+  const allActivePlayersFinished = activePlayers.every(p => isScoreSheetComplete(p.scoreSheet))
+  
+  if (game.turnNumber > 13 || allActivePlayersFinished) {
     game.gameStatus = 'finished'
-    // Déterminer le gagnant
-    const winner = game.players.reduce((prev, current) => 
+    // Déterminer le gagnant parmi les joueurs actifs (non-abandonnés)
+    const winner = activePlayers.reduce((prev, current) => 
       current.totalScore > prev.totalScore ? current : prev
     )
     game.winner = winner.name
@@ -137,6 +148,66 @@ export function chooseScore(
   }
   
   return game
+}
+
+/**
+ * Marque un joueur comme ayant abandonné
+ */
+export function removePlayer(roomId: string, playerId: string): GameState | null {
+  const game = games.get(roomId)
+  if (!game) return null
+  
+  const playerIndex = game.players.findIndex(p => p.id === playerId)
+  if (playerIndex === -1) return game
+  
+  const player = game.players[playerIndex]
+  console.log(`🚪 ${player.name} abandonne la partie ${roomId}`)
+  
+  // Marquer le joueur comme ayant abandonné
+  player.abandoned = true
+  
+  // Compter les joueurs actifs (non-abandonnés)
+  const activePlayers = game.players.filter(p => !p.abandoned)
+  
+  if (activePlayers.length === 0) {
+    // Plus personne, partie annulée
+    games.delete(roomId)
+    return null
+  } else if (activePlayers.length === 1) {
+    // Un seul joueur reste, il gagne
+    game.gameStatus = 'finished'
+    game.winner = activePlayers[0].name
+    console.log(`🏆 ${game.winner} gagne par abandon`)
+    return game
+  } else {
+    // 2+ joueurs restent, passer au prochain joueur actif
+    if (playerIndex === game.currentPlayerIndex) {
+      // Si c'était le tour du joueur qui abandonne, passer au suivant
+      game.currentPlayerIndex = getNextActivePlayerIndex(game)
+      // Réinitialiser les dés pour le prochain joueur
+      game.dice = createDice()
+      game.rollsLeft = 3
+    }
+    
+    console.log(`▶️ Partie continue avec ${activePlayers.length} joueurs actifs`)
+    return game
+  }
+}
+
+/**
+ * Trouve l'index du prochain joueur actif (non-abandonné)
+ */
+function getNextActivePlayerIndex(game: GameState): number {
+  let nextIndex = (game.currentPlayerIndex + 1) % game.players.length
+  let attempts = 0
+  
+  // Chercher le prochain joueur non-abandonné
+  while (game.players[nextIndex].abandoned && attempts < game.players.length) {
+    nextIndex = (nextIndex + 1) % game.players.length
+    attempts++
+  }
+  
+  return nextIndex
 }
 
 /**
@@ -165,4 +236,3 @@ export function resetDiceForNewTurn(roomId: string): GameState | null {
   
   return game
 }
-

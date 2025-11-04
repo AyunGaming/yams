@@ -1,9 +1,31 @@
+// Charger les variables d'environnement en premier
+import dotenv from 'dotenv'
+import { resolve } from 'path'
+
+// Charger .env.local en priorité (comme Next.js), puis .env
+dotenv.config({ path: resolve(process.cwd(), '.env.local') })
+dotenv.config({ path: resolve(process.cwd(), '.env') })
+
 import { createServer } from 'http'
 import { parse } from 'url'
 import next from 'next'
 import { Server as IOServer } from 'socket.io'
-import { initializeGame, rollDice, toggleDieLock, chooseScore } from './src/server/gameManager'
+import { createClient } from '@supabase/supabase-js'
+import { initializeGame, rollDice, toggleDieLock, chooseScore, removePlayer } from './src/server/gameManager'
 import { ScoreCategory } from './src/types/game'
+
+// Initialiser Supabase côté serveur
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Variables d\'environnement Supabase manquantes!')
+  console.log('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓' : '✗')
+  console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✓' : '✗')
+  console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✓' : '✗')
+}
+
+const supabase = createClient(supabaseUrl!, supabaseServiceKey!)
 
 const dev = process.env.NODE_ENV !== 'production'
 const hostname = 'localhost'
@@ -90,6 +112,19 @@ app.prepare().then(() => {
       
       console.log(`🎮 État du jeu initialisé:`, JSON.stringify(gameState, null, 2))
       
+      // Mettre à jour le status dans la base de données
+      supabase
+        .from('games')
+        .update({ status: 'in_progress' })
+        .eq('id', roomId)
+        .then(({ error }) => {
+          if (error) {
+            console.error('❌ Erreur lors de la mise à jour du status:', error)
+          } else {
+            console.log('✅ Status mis à jour en "in_progress"')
+          }
+        })
+      
       // Émettre l'événement de démarrage avec l'état initial
       io.to(roomId).emit('game_started', gameState)
       console.log(`✅ Partie démarrée dans la room ${roomId} avec ${players.length} joueurs`)
@@ -142,48 +177,57 @@ app.prepare().then(() => {
         return
       }
       
-      console.log(`🏳️ ${playerName} abandonne la partie ${roomId}`)
+      console.log(`🏳️ ${playerName} (${socket.id}) abandonne la partie ${roomId}`)
       
-      // Quitter la room
+      // Retirer le joueur du gameState
+      const updatedGame = removePlayer(roomId, socket.id)
+      
+      // Quitter la room socket
       socket.leave(roomId)
-      
-      // Vérifier combien de joueurs restent
-      const room = io.sockets.adapter.rooms.get(roomId)
-      const socketsInRoom = room ? Array.from(room) : []
-      
-      const players = socketsInRoom.map(socketId => {
-        const s = io.sockets.sockets.get(socketId)
-        return {
-          id: socketId,
-          name: s?.data?.playerName || 'Unknown',
-        }
-      })
       
       io.to(roomId).emit('system_message', `${playerName} a abandonné la partie`)
       
-      // Logique selon le nombre de joueurs restants
-      if (players.length === 0) {
-        // Plus personne, partie annulée
+      if (!updatedGame) {
+        // Plus de joueurs, partie annulée
         console.log(`❌ Partie ${roomId} annulée (aucun joueur restant)`)
         roomStates.delete(roomId)
-      } else if (players.length === 1) {
-        // Un seul joueur reste, il gagne par défaut
-        const winner = players[0]
-        console.log(`🏆 ${winner.name} gagne par abandon dans ${roomId}`)
+      } else if (updatedGame.gameStatus === 'finished') {
+        // Un seul joueur reste, il gagne
+        console.log(`🏆 ${updatedGame.winner} gagne par abandon dans ${roomId}`)
+        
+        // Mettre à jour la base de données
+        supabase
+          .from('games')
+          .update({
+            status: 'finished',
+            winner: updatedGame.winner,
+          })
+          .eq('id', roomId)
+          .then(({ error }) => {
+            if (error) {
+              console.error('❌ Erreur lors de la mise à jour de la partie:', error)
+            } else {
+              console.log('✅ Partie mise à jour dans la BDD (victoire par abandon)')
+            }
+          })
+        
+        io.to(roomId).emit('game_update', updatedGame)
         io.to(roomId).emit('game_ended', {
-          winner: winner.name,
+          winner: updatedGame.winner,
           reason: 'abandon',
-          message: `${winner.name} remporte la partie par abandon !`
+          message: `${updatedGame.winner} remporte la partie par abandon !`
         })
         roomStates.delete(roomId)
       } else {
         // 2+ joueurs restent, la partie continue
-        console.log(`▶️ La partie ${roomId} continue avec ${players.length} joueurs`)
-        io.to(roomId).emit('room_update', {
-          players,
-          started: true,
-        })
-        io.to(roomId).emit('system_message', `La partie continue avec ${players.length} joueurs`)
+        console.log(`▶️ La partie ${roomId} continue avec ${updatedGame.players.length} joueurs`)
+        
+        // Envoyer le gameState mis à jour
+        io.to(roomId).emit('game_update', updatedGame)
+        io.to(roomId).emit('system_message', `La partie continue avec ${updatedGame.players.length} joueurs`)
+        
+        const currentPlayer = updatedGame.players[updatedGame.currentPlayerIndex]
+        io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
       }
     })
 
@@ -216,6 +260,22 @@ app.prepare().then(() => {
         io.to(roomId).emit('game_update', gameState)
         
         if (gameState.gameStatus === 'finished') {
+          // Mettre à jour la base de données
+          supabase
+            .from('games')
+            .update({
+              status: 'finished',
+              winner: gameState.winner,
+            })
+            .eq('id', roomId)
+            .then(({ error }) => {
+              if (error) {
+                console.error('❌ Erreur lors de la mise à jour de la partie:', error)
+              } else {
+                console.log('✅ Partie mise à jour dans la BDD')
+              }
+            })
+
           io.to(roomId).emit('game_ended', {
             winner: gameState.winner,
             reason: 'completed',

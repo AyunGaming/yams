@@ -7,6 +7,7 @@ import { useSupabase } from '@/components/Providers'
 import { GameState, ScoreCategory } from '@/types/game'
 import Dice from '@/components/game/Dice'
 import ScoreGrid from '@/components/game/ScoreGrid'
+import GameOver from '@/components/game/GameOver'
 
 type Player = { id: string; name: string }
 
@@ -22,10 +23,13 @@ export default function GamePage() {
   const [copied, setCopied] = useState(false)
   const [systemMessages, setSystemMessages] = useState<string[]>([])
   const [gameEnded, setGameEnded] = useState(false)
-  const [endMessage, setEndMessage] = useState('')
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [isRolling, setIsRolling] = useState(false)
   const [rollCount, setRollCount] = useState(0)
+  const [transitionAnimation, setTransitionAnimation] = useState<'slide-down' | 'slide-up' | null>(null)
+  const [delayedIsMyTurn, setDelayedIsMyTurn] = useState(false)
+  const [transitionPlayerId, setTransitionPlayerId] = useState<string | null>(null)
+  const previousPlayerIndexRef = useRef<number | null>(null)
   const socketRef = useRef<Socket | null>(null)
   const isConnectingRef = useRef(false)
 
@@ -116,7 +120,10 @@ export default function GamePage() {
 
       newSocket.on('game_update', (updatedState: GameState) => {
         setGameState(updatedState)
-        setIsRolling(false)
+        // Garder isRolling à true pendant 600ms (durée de l'animation)
+        setTimeout(() => {
+          setIsRolling(false)
+        }, 600)
         console.log('🔄 État du jeu mis à jour', updatedState)
       })
 
@@ -128,7 +135,6 @@ export default function GamePage() {
       newSocket.on('game_ended', (data: { winner: string; reason: string; message: string }) => {
         console.log('🏁 Partie terminée:', data)
         setGameEnded(true)
-        setEndMessage(data.message)
       })
 
       newSocket.on('connect_error', (error) => {
@@ -199,6 +205,52 @@ export default function GamePage() {
     }
   }
 
+  // Détecte le changement de tour pour l'animation
+  useEffect(() => {
+    if (!gameState || !socketRef.current) return
+    
+    const currentIndex = gameState.currentPlayerIndex
+    const wasMyTurn = previousPlayerIndexRef.current !== null && 
+      gameState.players[previousPlayerIndexRef.current]?.id === socketRef.current.id
+    const isNowMyTurn = gameState.players[currentIndex]?.id === socketRef.current.id
+    
+    // Détecte le changement de tour
+    if (previousPlayerIndexRef.current !== null && previousPlayerIndexRef.current !== currentIndex) {
+      if (wasMyTurn && !isNowMyTurn) {
+        // Mon tour se termine → fiche du joueur suivant apparaît (slide-down)
+        console.log('🎬 Animation slide-down déclenchée')
+        setTransitionAnimation('slide-down')
+        setDelayedIsMyTurn(false) // Mise à jour immédiate
+        setTransitionPlayerId(gameState.players[currentIndex].id)
+        setTimeout(() => {
+          setTransitionAnimation(null)
+          setTransitionPlayerId(null)
+        }, 600)
+      } else if (!wasMyTurn && isNowMyTurn) {
+        // Le tour d'un adversaire se termine et ça devient mon tour → sa fiche disparaît (slide-up)
+        const previousPlayer = gameState.players[previousPlayerIndexRef.current]
+        console.log('🎬 Animation slide-up déclenchée pour', previousPlayer.name)
+        setDelayedIsMyTurn(false) // Garder le mode "adversaire" pendant l'animation
+        setTransitionAnimation('slide-up')
+        setTransitionPlayerId(previousPlayer.id) // Garder l'ID du joueur précédent
+        // Retarder le passage à "mon tour" pour laisser l'animation se jouer
+        setTimeout(() => {
+          console.log('✅ Animation slide-up terminée, passage aux cartes compactes')
+          setDelayedIsMyTurn(true)
+          setTransitionAnimation(null)
+          setTransitionPlayerId(null)
+        }, 600)
+      }
+    } else {
+      // Initialisation ou pas de changement
+      setDelayedIsMyTurn(isNowMyTurn)
+      setTransitionPlayerId(null)
+    }
+    
+    previousPlayerIndexRef.current = currentIndex
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState?.currentPlayerIndex])
+
   // Helpers
   const isMyTurn = () => {
     if (!gameState || !socketRef.current) return false
@@ -255,11 +307,11 @@ export default function GamePage() {
         </p>
 
         <div className="flex gap-3">
-          {isHost && players.length >= 2 && (
-            <button onClick={handleStart} className="btn btn-success">
-              🚀 Démarrer la partie
-            </button>
-          )}
+        {isHost && players.length >= 2 && (
+          <button onClick={handleStart} className="btn btn-success">
+            🚀 Démarrer la partie
+          </button>
+        )}
           <button onClick={handleLeave} className="btn btn-outline btn-error">
             🚪 Quitter la partie
           </button>
@@ -281,6 +333,11 @@ export default function GamePage() {
   const currentPlayer = gameState.players[gameState.currentPlayerIndex]
   const myTurn = isMyTurn()
 
+  // Si la partie est terminée, afficher l'écran de fin
+  if (gameEnded || gameState.gameStatus === 'finished') {
+    return <GameOver gameState={gameState} mySocketId={socketRef.current?.id} />
+  }
+
   return (
     <div className="container mx-auto p-4 space-y-6">
       {/* En-tête */}
@@ -289,21 +346,8 @@ export default function GamePage() {
         <p className="text-sm text-base-content/70">Partie #{uuid.slice(0, 8)}</p>
       </div>
       
-      {gameEnded ? (
-        <div className="text-center space-y-4">
-          <div className="alert alert-success max-w-md mx-auto">
-            <span className="text-lg">🏁 {endMessage}</span>
-          </div>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="btn btn-primary"
-          >
-            Retour au dashboard
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* Info joueur actif */}
+      <>
+        {/* Info joueur actif */}
           <div className={`alert ${myTurn ? 'alert-info' : 'alert-warning'} max-w-md mx-auto`}>
             {myTurn ? (
               <span>🎯 C&apos;est votre tour !</span>
@@ -331,10 +375,19 @@ export default function GamePage() {
                 
                 <button
                   onClick={handleRollDice}
-                  disabled={gameState.rollsLeft === 0}
+                  disabled={gameState.rollsLeft === 0 || isRolling}
                   className="btn btn-primary mt-4"
                 >
-                  {gameState.rollsLeft === 3 ? '🎲 Lancer les dés' : '🎲 Relancer'}
+                  {isRolling ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Lancer en cours...
+                    </>
+                  ) : gameState.rollsLeft === 3 ? (
+                    '🎲 Lancer les dés'
+                  ) : (
+                    '🎲 Relancer'
+                  )}
                 </button>
                 
                 <p className="text-xs text-base-content/60 mt-2">
@@ -345,31 +398,198 @@ export default function GamePage() {
                 </p>
               </div>
             </div>
-          )}
+          )} 
 
           {/* Grilles de score */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-6xl mx-auto">
-            {gameState.players.map((player) => (
-              <div key={player.id}>
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-bold">
-                    {player.name}
-                    {player.id === socketRef.current?.id && ' (Vous)'}
-                  </h3>
-                  <span className="badge badge-lg">
-                    Score: {player.totalScore}
-                  </span>
-                </div>
+          <div className="w-full max-w-7xl mx-auto">
+            {(() => {
+              // Trier les joueurs : ma propre fiche en premier, puis les autres
+              const sortedPlayers = [...gameState.players].sort((a, b) => {
+                const aIsMe = a.id === socketRef.current?.id
+                const bIsMe = b.id === socketRef.current?.id
                 
-                <ScoreGrid
-                  scoreSheet={player.scoreSheet}
-                  currentDice={gameState.dice.map(d => d.value)}
-                  onChooseScore={handleChooseScore}
-                  isMyTurn={myTurn && player.id === socketRef.current?.id}
-                  canChoose={gameState.rollsLeft < 3}
-                />
-              </div>
-            ))}
+                if (aIsMe) return -1
+                if (bIsMe) return 1
+                return 0
+              })
+              
+              const myPlayer = sortedPlayers[0]
+              const otherPlayers = sortedPlayers.slice(1)
+              
+              return (
+                <>
+                  {/* Version mobile - empilé verticalement */}
+                  <div className="lg:hidden space-y-4">
+                    {/* Ma fiche complète */}
+                    <div className={myPlayer.abandoned ? 'opacity-50' : ''}>
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-bold">
+                          {myPlayer.name} (Vous)
+                          {gameState.players[gameState.currentPlayerIndex].id === myPlayer.id && 
+                            <span className="ml-2 badge badge-info badge-sm">En jeu</span>
+                          }
+                          {myPlayer.abandoned && <span className="ml-2 text-sm text-error">(Abandonné)</span>}
+                        </h3>
+                        <span className="badge badge-lg">
+                          Score: {myPlayer.totalScore}
+                        </span>
+                      </div>
+                      
+                      <ScoreGrid
+                        scoreSheet={myPlayer.scoreSheet}
+                        currentDice={gameState.dice.map(d => d.value)}
+                        onChooseScore={handleChooseScore}
+                        isMyTurn={myTurn && myPlayer.id === socketRef.current?.id}
+                        canChoose={gameState.rollsLeft < 3}
+                      />
+                    </div>
+
+                    {/* Adversaires - version compacte */}
+                    {otherPlayers.length > 0 && (
+                      <div>
+                        <h3 className="font-bold text-lg mb-3">Adversaires</h3>
+                        <div className="space-y-2">
+                          {otherPlayers.map((player) => {
+                            const isCurrentPlayer = gameState.players[gameState.currentPlayerIndex].id === player.id
+                            
+                            return (
+                              <div 
+                                key={player.id}
+                                className={`
+                                  card bg-base-200 p-4
+                                  ${player.abandoned ? 'opacity-50' : ''}
+                                  ${isCurrentPlayer ? 'ring-2 ring-info' : ''}
+                                `}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <div className="font-bold">
+                                      {player.name}
+                                      {isCurrentPlayer && <span className="ml-2 badge badge-info badge-sm">En jeu</span>}
+                                      {player.abandoned && <span className="ml-2 text-sm text-error">(Abandonné)</span>}
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-2xl font-bold text-primary">{player.totalScore}</div>
+                                    <div className="text-xs text-base-content/60">points</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Version desktop - grid */}
+                  <div className="hidden lg:grid lg:grid-cols-2 gap-6">
+                    {/* Colonne gauche - Ma fiche */}
+                    <div className={myPlayer.abandoned ? 'opacity-50' : ''}>
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-bold">
+                          {myPlayer.name} (Vous)
+                          {gameState.players[gameState.currentPlayerIndex].id === myPlayer.id && 
+                            <span className="ml-2 badge badge-info badge-sm">En jeu</span>
+                          }
+                          {myPlayer.abandoned && <span className="ml-2 text-sm text-error">(Abandonné)</span>}
+                        </h3>
+                        <span className="badge badge-lg">
+                          Score: {myPlayer.totalScore}
+                        </span>
+                      </div>
+                      
+                      <ScoreGrid
+                        scoreSheet={myPlayer.scoreSheet}
+                        currentDice={gameState.dice.map(d => d.value)}
+                        onChooseScore={handleChooseScore}
+                        isMyTurn={myTurn && myPlayer.id === socketRef.current?.id}
+                        canChoose={gameState.rollsLeft < 3}
+                      />
+                    </div>
+
+                    {/* Colonne droite - Adversaires */}
+                    <div>
+                      {(() => {
+                        // Utilise delayedIsMyTurn pour permettre l'animation slide-up de se jouer
+                        // Forcer le mode adversaire si slide-up en cours
+                        const shouldShowCompactCards = delayedIsMyTurn && transitionAnimation !== 'slide-up'
+                        
+                        if (shouldShowCompactCards) {
+                          // C'est mon tour : afficher les cartes compactes de tous les adversaires
+                          return (
+                            <div>
+                              <h3 className="font-bold text-lg mb-3">Adversaires</h3>
+                              <div className="space-y-2">
+                                {otherPlayers.map((player) => (
+                                  <div 
+                                    key={player.id}
+                                    className={`
+                                      card bg-base-200 p-4
+                                      ${player.abandoned ? 'opacity-50' : ''}
+                                    `}
+                                  >
+                                    <div className="flex justify-between items-center">
+                                      <div>
+                                        <div className="font-bold">
+                                          {player.name}
+                                          {player.abandoned && <span className="ml-2 text-sm text-error">(Abandonné)</span>}
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="text-2xl font-bold text-primary">{player.totalScore}</div>
+                                        <div className="text-xs text-base-content/60">points</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        } else {
+                          // C'est le tour d'un adversaire : afficher seulement sa fiche complète
+                          // Pendant la transition, utiliser transitionPlayerId pour garder le bon joueur affiché
+                          const playerIdToShow = transitionPlayerId || gameState.players[gameState.currentPlayerIndex].id
+                          const currentPlayer = otherPlayers.find(p => p.id === playerIdToShow)
+                          
+                          if (!currentPlayer) return null
+                          
+                          return (
+                            <div 
+                              key={`player-${currentPlayer.id}-${transitionAnimation || 'static'}`}
+                              className={`
+                                ${currentPlayer.abandoned ? 'opacity-50' : ''}
+                                ${transitionAnimation === 'slide-down' ? 'animate-slide-down' : ''}
+                                ${transitionAnimation === 'slide-up' ? 'animate-slide-up' : ''}
+                              `}
+                            >
+                              <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-bold">
+                                  {currentPlayer.name}
+                                  {!transitionPlayerId && <span className="ml-2 badge badge-info badge-sm">En jeu</span>}
+                                  {currentPlayer.abandoned && <span className="ml-2 text-sm text-error">(Abandonné)</span>}
+                                </h3>
+                                <span className="badge badge-lg">
+                                  Score: {currentPlayer.totalScore}
+                                </span>
+                              </div>
+                              
+                              <ScoreGrid
+                                scoreSheet={currentPlayer.scoreSheet}
+                                currentDice={gameState.dice.map(d => d.value)}
+                                onChooseScore={handleChooseScore}
+                                isMyTurn={false}
+                                canChoose={false}
+                              />
+                            </div>
+                          )
+                        }
+                      })()}
+                    </div>
+                  </div>
+                </>
+              )
+            })()}
           </div>
 
           {/* Messages système */}
@@ -388,15 +608,14 @@ export default function GamePage() {
 
           {/* Bouton abandonner */}
           <div className="text-center">
-            <button
+      <button
               onClick={handleLeave}
               className="btn btn-outline btn-error btn-sm"
-            >
-              🏳️ Abandonner
-            </button>
-          </div>
-        </>
-      )}
+      >
+            🏳️ Abandonner
+      </button>
+        </div>
+      </>
     </div>
   )
 }
