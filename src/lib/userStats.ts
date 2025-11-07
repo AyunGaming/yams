@@ -55,9 +55,9 @@ export function countYamsInScoreSheet(scoreSheet: ScoreSheet): number {
   
   // Vérifier les bonus Yams (si implémenté dans votre logique)
   // Note: actuellement non implémenté dans le jeu, mais préparé pour l'avenir
-  if (scoreSheet.yams_bonus && scoreSheet.yams_bonus > 0) {
-    yamsCount += Math.floor(scoreSheet.yams_bonus / 100)
-  }
+  // if (scoreSheet.yams_bonus && scoreSheet.yams_bonus > 0) {
+  //  yamsCount += Math.floor(scoreSheet.yams_bonus / 100)
+  // }
   
   return yamsCount
 }
