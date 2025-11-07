@@ -132,6 +132,8 @@ export function useGameSocket({
         path: '/api/socket',
         transports: ['websocket', 'polling'],
         reconnection: false,
+        timeout: 20000, // Augmenter le timeout à 20s (utile pour Docker)
+        forceNew: true,
         auth: {
           token: token,
           serverRestartId: serverRestartId,
