@@ -4,8 +4,10 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSupabase } from '@/components/Providers'
+import { GameVariant } from '@/types/game'
+import { VARIANT_NAMES } from '@/lib/variantLogic'
 
 interface PlayerScore {
   id: string
@@ -22,22 +24,35 @@ interface Game {
   created_at: string
   winner: string | null
   players_scores: PlayerScore[] | null
+  variant: GameVariant
 }
 
 export default function GameHistory() {
   const { supabase, user } = useSupabase()
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
+  const lastFetchedUserId = useRef<string | null>(null)
+
+  const userId = user?.id
 
   // Charger les 10 dernières parties terminées de l'utilisateur
   useEffect(() => {
     const fetchGames = async () => {
-      if (!user) return
+      if (!userId) return
+
+      // Éviter de recharger si on a déjà les données pour cet utilisateur
+      if (lastFetchedUserId.current === userId) {
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      lastFetchedUserId.current = userId
 
       // Récupérer les parties terminées (limite augmentée pour filtrer ensuite)
       const { data, error } = await supabase
         .from('games')
-        .select('id, owner, status, created_at, winner, players_scores')
+        .select('id, owner, status, created_at, winner, players_scores, variant')
         .eq('status', 'finished')
         .order('created_at', { ascending: false })
         .limit(50) // Optimisé : 50 au lieu de 100
@@ -52,11 +67,11 @@ export default function GameHistory() {
       const myGames = (data || [])
         .filter((game) => {
           // Vérifier si l'utilisateur est l'owner
-          if (game.owner === user.id) return true
+          if (game.owner === userId) return true
           
           // Vérifier si l'utilisateur est dans players_scores
           if (game.players_scores && Array.isArray(game.players_scores)) {
-            return game.players_scores.some((p: PlayerScore) => p.user_id === user.id)
+            return game.players_scores.some((p: PlayerScore) => p.user_id === userId)
           }
           
           return false
@@ -68,7 +83,7 @@ export default function GameHistory() {
     }
 
     fetchGames()
-  }, [user, supabase])
+  }, [userId, supabase])
 
   if (loading) {
     return (
@@ -105,6 +120,7 @@ export default function GameHistory() {
               <thead>
                 <tr>
                   <th>Date</th>
+                  <th>Variante</th>
                   <th>Votre score</th>
                   <th>Vainqueur</th>
                 </tr>
@@ -122,7 +138,11 @@ export default function GameHistory() {
                   // Vérifier si l'utilisateur est le vainqueur
                   const iWon = g.winner === user?.email || 
                                (myPlayerData && g.winner === myPlayerData.name)
-
+                  
+                  // Récupérer le nom de la variante (défaut : Classique si non défini)
+                  const variant = g.variant || 'classic'
+                  const variantName = VARIANT_NAMES[variant]
+                  
                   return (
                     <tr key={g.id} className={iAbandoned ? 'opacity-60' : ''}>
                       <td>
@@ -133,6 +153,11 @@ export default function GameHistory() {
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
+                      </td>
+                      <td>
+                        <span className={`badge badge-sm badge-neutral`}>
+                          {variantName}
+                        </span>
                       </td>
                       <td>
                         <div className="flex items-center gap-2">
