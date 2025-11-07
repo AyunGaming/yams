@@ -7,14 +7,24 @@ import { calculateScore, calculateTotalScore, createEmptyScoreSheet, isScoreShee
 const games = new Map<string, GameState>()
 
 /**
+ * Nettoie tous les gestionnaires de jeu (utilisé au redémarrage du serveur)
+ */
+export function clearAllGames(): void {
+  const count = games.size
+  games.clear()
+  console.log(`🧹 ${count} partie(s) supprimée(s) de la mémoire`)
+}
+
+/**
  * Initialise une nouvelle partie
  */
-export function initializeGame(roomId: string, players: { id: string; name: string }[]): GameState {
+export function initializeGame(roomId: string, players: { id: string; name: string; userId?: string }[]): GameState {
   const gameState: GameState = {
     roomId,
     players: players.map(p => ({
       id: p.id,
       name: p.name,
+      userId: p.userId,
       scoreSheet: createEmptyScoreSheet(),
       totalScore: 0,
       abandoned: false,
