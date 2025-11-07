@@ -3,6 +3,7 @@
  * Affiche l'interface de jeu avec les dés, les scores et les joueurs
  */
 
+import { useEffect, useRef } from 'react'
 import { Socket } from 'socket.io-client'
 import { GameState, ScoreCategory } from '@/types/game'
 import Dice from './Dice'
@@ -38,6 +39,34 @@ export default function GameBoard({
 }: GameBoardProps) {
   const currentPlayer = gameState.players[gameState.currentPlayerIndex]
   const myTurn = currentPlayer.id === socket.id
+  
+  // Références pour détecter les changements de tour
+  const previousMyTurnRef = useRef<boolean | null>(null)
+  const isFirstRenderRef = useRef(true)
+
+  // Scroll automatique quand c'est mon tour
+  useEffect(() => {
+    // Ignorer le premier rendu
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false
+      previousMyTurnRef.current = myTurn
+      return
+    }
+
+    // Détecter le passage de "pas mon tour" à "mon tour"
+    const turnJustStarted = previousMyTurnRef.current === false && myTurn === true
+
+    if (turnJustStarted) {
+      // Scroll fluide vers le haut
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      })
+    }
+
+    // Mettre à jour la référence
+    previousMyTurnRef.current = myTurn
+  }, [myTurn])
 
   return (
     <div className="min-h-screen flex flex-col">
