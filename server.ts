@@ -40,7 +40,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Configuration Next.js
 const dev = process.env.NODE_ENV !== 'production'
-const hostname = 'localhost'
+// En production (Docker), utiliser 0.0.0.0 pour accepter les connexions externes
+const hostname = process.env.HOSTNAME || (dev ? 'localhost' : '0.0.0.0')
 const port = parseInt(process.env.PORT || '3000', 10)
 
 const app = next({ dev, hostname, port })
@@ -102,7 +103,13 @@ app.prepare().then(async () => {
     cors: {
       origin: '*',
       methods: ['GET', 'POST'],
+      credentials: true,
     },
+    // Configuration pour Docker/production
+    pingTimeout: 60000, // 60s avant de considérer la connexion morte
+    pingInterval: 25000, // Ping toutes les 25s pour maintenir la connexion
+    connectTimeout: 45000, // 45s pour établir la connexion initiale
+    transports: ['websocket', 'polling'],
   })
 
   // Middleware d'authentification Socket.IO
@@ -123,7 +130,8 @@ app.prepare().then(async () => {
   })
 
   // Démarrer le serveur
-  server.listen(port, () => {
+  server.listen(port, hostname, () => {
     console.log(`[SERVER] Ready on http://${hostname}:${port}`)
+    console.log(`[SERVER] Socket.IO ready on ${hostname}:${port}/api/socket`)
   })
 })
