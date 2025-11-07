@@ -5,6 +5,8 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { GameVariant } from '@/types/game'
+import { VARIANT_NAMES } from '@/lib/variantLogic'
 
 type Player = { id: string; name: string; avatar?: string }
 
@@ -15,6 +17,8 @@ interface WaitingRoomProps {
   isHost: boolean
   onStart: () => void
   onLeave: () => void
+  variant?: GameVariant
+  variantLoading?: boolean
 }
 
 /**
@@ -27,6 +31,8 @@ export default function WaitingRoom({
   isHost,
   onStart,
   onLeave,
+  variant = 'classic',
+  variantLoading = false,
 }: WaitingRoomProps) {
   const [copied, setCopied] = useState(false)
 
@@ -94,6 +100,16 @@ export default function WaitingRoom({
             <div className="card-body">
               <h3 className="card-title text-lg">ℹ️ Informations</h3>
               <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-base-content/70">Variante :</span>
+                  {variantLoading ? (
+                    <span className="loading loading-spinner loading-xs"></span>
+                  ) : (
+                    <span className="badge badge-primary">
+                      {VARIANT_NAMES[variant]}
+                    </span>
+                  )}
+                </div>
                 <div className="flex justify-between items-center">
                   <span className="text-base-content/70">Joueurs :</span>
                   <span className="font-bold">

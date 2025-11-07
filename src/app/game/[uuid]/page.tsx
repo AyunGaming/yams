@@ -16,7 +16,7 @@ import {
   handleToggleDieLock,
   handleChooseScore,
 } from '@/lib/gameHandlers'
-import { ScoreCategory } from '@/types/game'
+import { ScoreCategory, GameVariant } from '@/types/game'
 import WaitingRoom from '@/components/game/WaitingRoom'
 import GameBoard from '@/components/game/GameBoard'
 import GameOver from '@/components/game/GameOver'
@@ -44,6 +44,35 @@ export default function GamePage() {
   // État local pour les animations des dés
   const [isRolling, setIsRolling] = useState(false)
   const [rollCount, setRollCount] = useState(0)
+  
+  // État pour la variante de la partie
+  const [variant, setVariant] = useState<GameVariant>('classic')
+  const [variantLoading, setVariantLoading] = useState(true)
+
+  // Charger la variante depuis la base de données
+  useEffect(() => {
+    const fetchVariant = async () => {
+      if (!uuid) return
+      
+      try {
+        const { data, error } = await supabase
+          .from('games')
+          .select('variant')
+          .eq('id', uuid)
+          .single()
+        
+        if (!error && data) {
+          setVariant(data.variant || 'classic')
+        }
+      } catch (err) {
+        console.error('Erreur lors de la récupération de la variante:', err)
+      } finally {
+        setVariantLoading(false)
+      }
+    }
+    
+    fetchVariant()
+  }, [uuid, supabase])
 
   // Gérer l'animation des dés
   useEffect(() => {
@@ -86,6 +115,8 @@ export default function GamePage() {
         isHost={isHost}
         onStart={onStart}
         onLeave={onLeave}
+        variant={variant}
+        variantLoading={variantLoading}
       />
     )
   }
