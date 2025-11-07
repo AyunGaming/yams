@@ -17,9 +17,8 @@ export const tokenManager = {
       localStorage.setItem(TOKEN_KEY, accessToken)
       const expiryTime = Date.now() + expiresIn * 1000
       localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString())
-      console.log('✅ Token stocké avec succès')
     } catch (error) {
-      console.error('❌ Erreur lors du stockage du token:', error)
+      console.error('Erreur lors du stockage du token:', error)
     }
   },
 
@@ -99,9 +98,8 @@ export const tokenManager = {
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(REFRESH_TOKEN_KEY)
       localStorage.removeItem(TOKEN_EXPIRY_KEY)
-      console.log('✅ Tokens supprimés')
     } catch (error) {
-      console.error('❌ Erreur lors de la suppression des tokens:', error)
+      console.error('Erreur lors de la suppression des tokens:', error)
     }
   },
 
