@@ -32,6 +32,7 @@ export interface Die {
 export interface PlayerGameState {
   id: string
   name: string
+  userId?: string  // UUID de l'utilisateur (optionnel pour compatibilité)
   scoreSheet: ScoreSheet
   totalScore: number
   abandoned: boolean
