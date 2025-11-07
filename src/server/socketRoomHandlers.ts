@@ -86,15 +86,31 @@ export function setupRoomHandlers(
   /**
    * Démarrer une partie
    */
-  socket.on('start_game', (roomId: string) => {
+  socket.on('start_game', async (roomId: string) => {
     // Marquer que la partie a démarré
     roomStates.set(roomId, { started: true })
 
     // Récupérer les joueurs
     const players = getPlayersInRoom(io, roomId)
 
-    // Initialiser l'état du jeu
-    const gameState = initializeGame(roomId, players)
+    // Récupérer la variante depuis la base de données
+    let variant: 'classic' | 'descending' | 'ascending' = 'classic'
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('variant')
+        .eq('id', roomId)
+        .single()
+
+      if (!error && data) {
+        variant = data.variant || 'classic'
+      }
+    } catch (err) {
+      console.error('[GAME] Erreur lors de la récupération de la variante:', err)
+    }
+
+    // Initialiser l'état du jeu avec la variante
+    const gameState = initializeGame(roomId, players, variant)
 
     // Mettre à jour le status dans la base de données
     supabase

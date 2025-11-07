@@ -1,7 +1,8 @@
 // Gestionnaire de l'état des parties côté serveur
 
-import { GameState, Die, ScoreCategory } from '../types/game'
+import { GameState, Die, ScoreCategory, GameVariant } from '../types/game'
 import { calculateScore, calculateTotalScore, createEmptyScoreSheet, isScoreSheetComplete } from '../lib/yamsLogic'
+import { canChooseCategory } from '../lib/variantLogic'
 
 // Stocker les états de jeu en mémoire
 const games = new Map<string, GameState>()
@@ -18,7 +19,11 @@ export function clearAllGames(): void {
 /**
  * Initialise une nouvelle partie
  */
-export function initializeGame(roomId: string, players: { id: string; name: string; userId?: string }[]): GameState {
+export function initializeGame(
+  roomId: string, 
+  players: { id: string; name: string; userId?: string }[],
+  variant: GameVariant = 'classic'
+): GameState {
   const gameState: GameState = {
     roomId,
     players: players.map(p => ({
@@ -35,6 +40,7 @@ export function initializeGame(roomId: string, players: { id: string; name: stri
     turnNumber: 1,
     gameStatus: 'playing',
     winner: null,
+    variant,
   }
   
   games.set(roomId, gameState)
@@ -113,8 +119,9 @@ export function chooseScore(
     return game
   }
   
-  // Vérifier que la catégorie n'est pas déjà remplie
-  if (currentPlayer.scoreSheet[category] !== null) {
+  // Vérifier que la catégorie peut être choisie selon la variante
+  if (!canChooseCategory(game.variant, category, currentPlayer.scoreSheet)) {
+    console.log(`[GAME] Catégorie ${category} non autorisée pour la variante ${game.variant}`)
     return game
   }
   
