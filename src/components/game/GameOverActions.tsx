@@ -3,7 +3,7 @@
  * Boutons rematch et retour au dashboard
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Socket } from 'socket.io-client'
 import { generateGameId } from '@/lib/gameIdGenerator'
@@ -33,6 +33,7 @@ export default function GameOverActions({
   const router = useRouter()
   const [creatingRematch, setCreatingRematch] = useState(false)
   const [rematchAvailable, setRematchAvailable] = useState<string | null>(null)
+  const isCreatingRematch = useRef(false)
 
   // Écouter les notifications de rematch
   useEffect(() => {
@@ -52,7 +53,14 @@ export default function GameOverActions({
    */
   const createRematch = async () => {
     if (!user) return
+    
+    // Empêcher les appels multiples
+    if (isCreatingRematch.current) {
+      console.log('[REMATCH] Création déjà en cours, ignorer')
+      return
+    }
 
+    isCreatingRematch.current = true
     setCreatingRematch(true)
 
     try {
@@ -68,9 +76,12 @@ export default function GameOverActions({
       if (error) {
         console.error('[REMATCH] Erreur lors de la création:', error)
         alert('Erreur lors de la création de la nouvelle partie')
+        isCreatingRematch.current = false
         setCreatingRematch(false)
         return
       }
+
+      console.log('[REMATCH] Partie créée avec succès:', newGameId)
 
       // Notifier les autres joueurs via Socket.IO
       const myPlayer = gameState.players.find((p) => p.id === mySocketId)
@@ -83,10 +94,12 @@ export default function GameOverActions({
       }
 
       // Rediriger vers la nouvelle partie
+      console.log('[REMATCH] Redirection vers:', `/game/${newGameId}`)
       router.push(`/game/${newGameId}`)
     } catch (error) {
       console.error('[REMATCH] Erreur:', error)
       alert('Erreur lors de la création de la nouvelle partie')
+      isCreatingRematch.current = false
       setCreatingRematch(false)
     }
   }

@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useSupabase } from './Providers'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { UserStats } from '@/types/user'
 
 interface UserProfileProps {
@@ -23,6 +23,10 @@ export default function UserProfile({ detailed = true, userId }: UserProfileProp
   const { supabase, userProfile } = useSupabase()
   const [stats, setStats] = useState<UserStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const lastFetchedId = useRef<string | null>(null)
+
+  // Mémoriser l'ID pour éviter les changements de référence
+  const targetUserId = useMemo(() => userId || userProfile?.id, [userId, userProfile?.id])
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -31,13 +35,20 @@ export default function UserProfile({ detailed = true, userId }: UserProfileProp
         return
       }
 
+      if (!targetUserId) {
+        setLoading(false)
+        return
+      }
+
+      // Éviter de recharger si on a déjà chargé pour cet utilisateur
+      if (lastFetchedId.current === targetUserId) {
+        setLoading(false)
+        return
+      }
+
       try {
-        // Si on veut les stats détaillées, récupérer depuis la vue leaderboard
-        const targetUserId = userId || userProfile?.id
-        if (!targetUserId) {
-          setLoading(false)
-          return
-        }
+        setLoading(true)
+        lastFetchedId.current = targetUserId
 
         // Essayer d'abord depuis la vue leaderboard
         const { data, error } = await supabase
@@ -85,7 +96,7 @@ export default function UserProfile({ detailed = true, userId }: UserProfileProp
     }
 
     fetchStats()
-  }, [supabase, userProfile?.id, userId, detailed])
+  }, [supabase, targetUserId, detailed])
 
   // Utiliser le profil du contexte ou les stats chargées
   const profile = stats || userProfile

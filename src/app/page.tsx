@@ -14,7 +14,7 @@ export default function HomePage() {
             🎲 Yams
           </h1>
           <p className="text-2xl md:text-3xl text-base-content/80 mb-4">
-            Jouez au Yahtzee en ligne avec vos amis
+            Jouez au Yams en ligne avec vos amis
           </p>
           <p className="text-lg text-base-content/60 max-w-2xl mx-auto mb-8">
             Créez des parties en temps réel, lancez les dés et affrontez vos amis dans ce classique des jeux de dés.

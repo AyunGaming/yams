@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import { useSupabase } from '@/components/Providers'
 import { getLeaderboard } from '@/lib/userStats'
@@ -11,13 +11,21 @@ export default function Leaderboard() {
   const [leaderboardData, setLeaderboardData] = useState<UserStats[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const hasFetched = useRef(false)
 
   useEffect(() => {
     async function loadLeaderboard() {
       if (!supabase) return
+      
+      // Éviter les rechargements multiples
+      if (hasFetched.current) {
+        setLoading(false)
+        return
+      }
 
       setLoading(true)
       setError(null)
+      hasFetched.current = true
 
       const { data, error: err } = await getLeaderboard(supabase, 10)
 
