@@ -13,12 +13,12 @@ interface ScoreGridProps {
 
 const CATEGORIES = {
   upper: [
-    { key: 'ones' as ScoreCategory, label: 'As (1)', description: 'Somme des 1' },
-    { key: 'twos' as ScoreCategory, label: 'Deux (2)', description: 'Somme des 2' },
-    { key: 'threes' as ScoreCategory, label: 'Trois (3)', description: 'Somme des 3' },
-    { key: 'fours' as ScoreCategory, label: 'Quatre (4)', description: 'Somme des 4' },
-    { key: 'fives' as ScoreCategory, label: 'Cinq (5)', description: 'Somme des 5' },
-    { key: 'sixes' as ScoreCategory, label: 'Six (6)', description: 'Somme des 6' },
+    { key: 'ones' as ScoreCategory, label: 'As (1)', description: 'Somme des 1', targetScore: 3 },
+    { key: 'twos' as ScoreCategory, label: 'Deux (2)', description: 'Somme des 2', targetScore: 6 },
+    { key: 'threes' as ScoreCategory, label: 'Trois (3)', description: 'Somme des 3', targetScore: 9 },
+    { key: 'fours' as ScoreCategory, label: 'Quatre (4)', description: 'Somme des 4', targetScore: 12 },
+    { key: 'fives' as ScoreCategory, label: 'Cinq (5)', description: 'Somme des 5', targetScore: 15 },
+    { key: 'sixes' as ScoreCategory, label: 'Six (6)', description: 'Somme des 6', targetScore: 18 },
   ],
   lower: [
     { key: 'threeOfKind' as ScoreCategory, label: 'Brelan', description: '3 dés identiques' },
@@ -48,6 +48,21 @@ export default function ScoreGrid({
   const upperBonus = upperScore >= 63 ? 35 : 0
   const bonusProgress = Math.min(100, (upperScore / 63) * 100)
 
+  // Calculer le score attendu en fonction des cases réellement remplies
+  const expectedScore = CATEGORIES.upper
+    .filter(cat => scoreSheet[cat.key] !== null)
+    .reduce((sum, cat) => sum + cat.targetScore, 0)
+  
+  // Le joueur est "en avance" si son score est >= au score attendu pour les cases remplies
+  const isOnTrack = expectedScore === 0 || upperScore >= expectedScore
+  
+  // Couleur de la barre de progression
+  const progressColor = expectedScore === 0 
+    ? 'progress-primary' 
+    : isOnTrack 
+      ? 'progress-success' 
+      : 'progress-warning'
+
   return (
     <div className="w-full max-w-2xl">
       <div className="card bg-base-200 shadow-xl">
@@ -63,7 +78,7 @@ export default function ScoreGrid({
               </span>
             </div>
             <progress 
-              className="progress progress-primary w-full mb-3" 
+              className={`progress ${progressColor} w-full mb-3`}
               value={bonusProgress} 
               max="100"
             />
@@ -77,6 +92,7 @@ export default function ScoreGrid({
                   potentialScore={currentDice.length > 0 ? calculateScore(cat.key, currentDice) : null}
                   onChoose={() => onChooseScore(cat.key)}
                   canChoose={canChoose && isMyTurn && scoreSheet[cat.key] === null}
+                  targetScore={cat.targetScore}
                 />
               ))}
             </div>
@@ -112,15 +128,26 @@ export default function ScoreGrid({
 }
 
 interface ScoreLineProps {
-  category: { key: ScoreCategory; label: string; description: string }
+  category: { key: ScoreCategory; label: string; description: string; targetScore?: number }
   score: number | null
   potentialScore: number | null
   onChoose: () => void
   canChoose: boolean
+  targetScore?: number
 }
 
-function ScoreLine({ category, score, potentialScore, onChoose, canChoose }: ScoreLineProps) {
+function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targetScore }: ScoreLineProps) {
   const isChosen = score !== null
+  
+  // Déterminer la couleur de fond si la ligne est remplie et qu'un target score existe
+  let performanceColor = ''
+  if (isChosen && targetScore !== undefined && score !== null) {
+    if (score >= targetScore) {
+      performanceColor = 'bg-success/20 border-l-4 border-success' // Bon score (au moins un triple)
+    } else {
+      performanceColor = 'bg-warning/20 border-l-4 border-warning' // Score en retard
+    }
+  }
   
   return (
     <button
@@ -129,12 +156,12 @@ function ScoreLine({ category, score, potentialScore, onChoose, canChoose }: Sco
       className={`
         w-full p-2 rounded flex justify-between items-center
         transition-colors
-        ${isChosen 
+        ${performanceColor || (isChosen 
           ? 'bg-base-300 cursor-default' 
           : canChoose 
             ? 'bg-base-100 hover:bg-primary/20 cursor-pointer border border-primary/50' 
             : 'bg-base-100 cursor-not-allowed opacity-60'
-        }
+        )}
       `}
     >
       <div className="text-left">
