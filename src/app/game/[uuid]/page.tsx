@@ -335,7 +335,7 @@ export default function GamePage() {
 
   // Si la partie est terminée, afficher l'écran de fin
   if (gameEnded || gameState.gameStatus === 'finished') {
-    return <GameOver gameState={gameState} mySocketId={socketRef.current?.id} />
+    return <GameOver gameState={gameState} mySocketId={socketRef.current?.id} socket={socketRef.current} />
   }
 
   return (

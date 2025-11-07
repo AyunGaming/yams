@@ -2,14 +2,25 @@
 
 import { GameState } from '@/types/game'
 import { useRouter } from 'next/navigation'
+import { Socket } from 'socket.io-client'
+import { useState, useEffect } from 'react'
+import { useSupabase } from '@/components/Providers'
+import { v4 as uuidv4 } from 'uuid'
 
 interface GameOverProps {
   gameState: GameState
   mySocketId: string | undefined
+  socket: Socket | null
 }
 
-export default function GameOver({ gameState, mySocketId }: GameOverProps) {
+export default function GameOver({ gameState, mySocketId, socket }: GameOverProps) {
   const router = useRouter()
+  const { supabase, user } = useSupabase()
+  const [creatingRematch, setCreatingRematch] = useState(false)
+  const [rematchAvailable, setRematchAvailable] = useState<string | null>(null)
+  
+  // Déterminer si je suis l'hôte basé sur le premier joueur de la partie
+  const amIHost = gameState.players[0]?.id === mySocketId
   
   // Trier les joueurs : actifs par score décroissant, puis abandonnés à la fin
   const sortedPlayers = [...gameState.players].sort((a, b) => {
@@ -20,6 +31,58 @@ export default function GameOver({ gameState, mySocketId }: GameOverProps) {
   
   const winner = sortedPlayers.find(p => !p.abandoned) || sortedPlayers[0]
   const isWinner = winner.id === mySocketId && !winner.abandoned
+
+  // Créer une nouvelle partie (rematch)
+  const handleRematch = async () => {
+    if (!user || !socket) return
+
+    setCreatingRematch(true)
+    const newGameId = uuidv4()
+
+    // Créer la nouvelle partie dans la base de données
+    const { error } = await supabase.from('games').insert([
+      {
+        id: newGameId,
+        status: 'waiting',
+        owner: user.id,
+        created_at: new Date().toISOString(),
+      },
+    ])
+
+    setCreatingRematch(false)
+
+    if (error) {
+      console.error('Erreur lors de la création de la revanche:', error)
+      alert("Erreur lors de la création de la partie.")
+      return
+    }
+
+    // Notifier les autres joueurs qu'une nouvelle partie est disponible
+    socket.emit('rematch_created', {
+      oldRoomId: gameState.roomId,
+      newRoomId: newGameId,
+      hostName: gameState.players[0]?.name || 'L\'hôte',
+    })
+
+    // Rediriger l'hôte vers la nouvelle partie
+    router.push(`/game/${newGameId}`)
+  }
+
+  // Écouter les notifications de rematch
+  useEffect(() => {
+    if (!socket || amIHost) return
+
+    const handleRematchAvailable = (data: { newRoomId: string; hostName: string }) => {
+      console.log('🔔 Rematch disponible:', data)
+      setRematchAvailable(data.newRoomId)
+    }
+
+    socket.on('rematch_available', handleRematchAvailable)
+
+    return () => {
+      socket.off('rematch_available', handleRematchAvailable)
+    }
+  }, [socket, amIHost])
 
   // Calculer le meilleur score de chaque section pour chaque joueur
   const getUpperSectionScore = (player: typeof sortedPlayers[0]) => {
@@ -143,6 +206,42 @@ export default function GameOver({ gameState, mySocketId }: GameOverProps) {
           </div>
         </div>
 
+        {/* Notification de rematch disponible (pour les non-hôtes) */}
+        {!amIHost && rematchAvailable && (
+          <div className="card bg-gradient-to-r from-primary to-secondary shadow-2xl border-2 border-primary/50 animate-pulse">
+            <div className="card-body">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="text-5xl animate-bounce">🎮</div>
+                  <div>
+                    <h3 className="text-xl font-bold text-primary-content">
+                      Nouvelle partie disponible !
+                    </h3>
+                    <p className="text-sm text-primary-content/80 mt-1">
+                      L&apos;hôte a créé une nouvelle partie. Prêt pour une revanche ?
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={() => router.push(`/game/${rematchAvailable}`)}
+                    className="btn btn-success gap-2 shadow-lg hover:scale-105 transition-transform"
+                  >
+                    <span className="text-lg">🎯</span>
+                    Rejoindre
+                  </button>
+                  <button
+                    onClick={() => setRematchAvailable(null)}
+                    className="btn btn-ghost btn-outline text-primary-content hover:bg-base-100/20"
+                  >
+                    Refuser
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-4 justify-center">
           <button
@@ -151,12 +250,22 @@ export default function GameOver({ gameState, mySocketId }: GameOverProps) {
           >
             🏠 Retour au Dashboard
           </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="btn btn-outline btn-lg"
-          >
-            🔄 Nouvelle Partie
-          </button>
+          {amIHost && (
+            <button
+              onClick={handleRematch}
+              disabled={creatingRematch}
+              className="btn btn-outline btn-lg"
+            >
+              {creatingRematch ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Création...
+                </>
+              ) : (
+                '🔄 Nouvelle Partie'
+              )}
+            </button>
+          )}
         </div>
 
         {/* Note */}

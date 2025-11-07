@@ -56,7 +56,6 @@ export function rollDice(roomId: string): GameState | null {
   if (!game) return null
   
   if (game.rollsLeft <= 0) {
-    console.log('⚠️ Plus de lancers disponibles')
     return game
   }
   
@@ -96,19 +95,16 @@ export function chooseScore(
   
   const currentPlayer = game.players[game.currentPlayerIndex]
   if (currentPlayer.id !== playerId) {
-    console.log('⚠️ Ce n\'est pas le tour de ce joueur')
     return game
   }
   
   // Vérifier que le joueur n'a pas abandonné
   if (currentPlayer.abandoned) {
-    console.log('⚠️ Ce joueur a abandonné')
     return game
   }
   
   // Vérifier que la catégorie n'est pas déjà remplie
   if (currentPlayer.scoreSheet[category] !== null) {
-    console.log('⚠️ Cette catégorie est déjà remplie')
     return game
   }
   
@@ -118,7 +114,6 @@ export function chooseScore(
   currentPlayer.scoreSheet[category] = score
   currentPlayer.totalScore = calculateTotalScore(currentPlayer.scoreSheet)
   
-  console.log(`✅ ${currentPlayer.name} a marqué ${score} dans ${category}`)
   
   // Passer au joueur suivant actif (non-abandonné)
   const oldIndex = game.currentPlayerIndex
@@ -144,7 +139,6 @@ export function chooseScore(
       current.totalScore > prev.totalScore ? current : prev
     )
     game.winner = winner.name
-    console.log(`🏆 Partie terminée ! Gagnant : ${winner.name} avec ${winner.totalScore} points`)
   }
   
   return game
@@ -161,7 +155,6 @@ export function removePlayer(roomId: string, playerId: string): GameState | null
   if (playerIndex === -1) return game
   
   const player = game.players[playerIndex]
-  console.log(`🚪 ${player.name} abandonne la partie ${roomId}`)
   
   // Marquer le joueur comme ayant abandonné
   player.abandoned = true
@@ -177,7 +170,6 @@ export function removePlayer(roomId: string, playerId: string): GameState | null
     // Un seul joueur reste, il gagne
     game.gameStatus = 'finished'
     game.winner = activePlayers[0].name
-    console.log(`🏆 ${game.winner} gagne par abandon`)
     return game
   } else {
     // 2+ joueurs restent, passer au prochain joueur actif
@@ -189,7 +181,6 @@ export function removePlayer(roomId: string, playerId: string): GameState | null
       game.rollsLeft = 3
     }
     
-    console.log(`▶️ Partie continue avec ${activePlayers.length} joueurs actifs`)
     return game
   }
 }
