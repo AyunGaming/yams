@@ -1,7 +1,8 @@
 'use client'
 
-import { ScoreSheet, ScoreCategory } from '@/types/game'
+import { ScoreSheet, ScoreCategory, GameVariant } from '@/types/game'
 import { calculateScore } from '@/lib/yamsLogic'
+import { getNextCategory, VARIANT_NAMES } from '@/lib/variantLogic'
 
 interface ScoreGridProps {
   scoreSheet: ScoreSheet
@@ -9,6 +10,7 @@ interface ScoreGridProps {
   onChooseScore: (category: ScoreCategory) => void
   isMyTurn: boolean
   canChoose: boolean
+  variant?: GameVariant
 }
 
 const CATEGORIES = {
@@ -36,8 +38,17 @@ export default function ScoreGrid({
   currentDice, 
   onChooseScore, 
   isMyTurn,
-  canChoose 
+  canChoose,
+  variant = 'classic'
 }: ScoreGridProps) {
+  // Déterminer la prochaine catégorie à remplir (pour les variantes non-classiques)
+  const nextCategory = variant !== 'classic' ? getNextCategory(variant, scoreSheet) : null
+  
+  // Trouver le nom de la prochaine catégorie
+  const nextCategoryLabel = nextCategory 
+    ? (CATEGORIES.upper.find(c => c.key === nextCategory) || CATEGORIES.lower.find(c => c.key === nextCategory))?.label
+    : null
+  
   const upperScore = (scoreSheet.ones || 0) + 
                      (scoreSheet.twos || 0) + 
                      (scoreSheet.threes || 0) + 
@@ -67,7 +78,23 @@ export default function ScoreGrid({
     <div className="w-full max-w-2xl">
       <div className="card bg-base-200 shadow-xl">
         <div className="card-body p-4">
-          <h3 className="card-title text-lg mb-4">Feuille de Score</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="card-title text-lg">Feuille de Score</h3>
+            {variant !== 'classic' && (
+              <div className="badge badge-primary">
+                {VARIANT_NAMES[variant]}
+              </div>
+            )}
+          </div>
+          
+          {/* Afficher quelle catégorie est à remplir dans les variantes non-classiques */}
+          {variant !== 'classic' && nextCategory && isMyTurn && canChoose && (
+            <div className="alert alert-info mb-4 py-2">
+              <span className="text-sm">
+                Prochaine catégorie : <strong>{nextCategoryLabel}</strong>
+              </span>
+            </div>
+          )}
           
           {/* Section supérieure */}
           <div className="mb-4">
@@ -91,8 +118,9 @@ export default function ScoreGrid({
                   score={scoreSheet[cat.key]}
                   potentialScore={currentDice.length > 0 ? calculateScore(cat.key, currentDice) : null}
                   onChoose={() => onChooseScore(cat.key)}
-                  canChoose={canChoose && isMyTurn && scoreSheet[cat.key] === null}
+                  canChoose={canChoose && isMyTurn && scoreSheet[cat.key] === null && (variant === 'classic' || nextCategory === cat.key)}
                   targetScore={cat.targetScore}
+                  isNext={nextCategory === cat.key}
                 />
               ))}
             </div>
@@ -116,7 +144,8 @@ export default function ScoreGrid({
                   score={scoreSheet[cat.key]}
                   potentialScore={currentDice.length > 0 ? calculateScore(cat.key, currentDice) : null}
                   onChoose={() => onChooseScore(cat.key)}
-                  canChoose={canChoose && isMyTurn && scoreSheet[cat.key] === null}
+                  canChoose={canChoose && isMyTurn && scoreSheet[cat.key] === null && (variant === 'classic' || nextCategory === cat.key)}
+                  isNext={nextCategory === cat.key}
                 />
               ))}
             </div>
@@ -134,9 +163,10 @@ interface ScoreLineProps {
   onChoose: () => void
   canChoose: boolean
   targetScore?: number
+  isNext?: boolean
 }
 
-function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targetScore }: ScoreLineProps) {
+function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targetScore, isNext = false }: ScoreLineProps) {
   const isChosen = score !== null
   
   // Déterminer la couleur de fond si la ligne est remplie et qu'un target score existe
@@ -147,6 +177,11 @@ function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targe
     } else {
       performanceColor = 'bg-warning/20 border-l-4 border-warning' // Score en retard
     }
+  }
+  
+  // Mettre en évidence la prochaine catégorie à remplir
+  if (isNext && !isChosen) {
+    performanceColor = 'bg-info/20 border-2 border-info ring-2 ring-info/30'
   }
   
   return (

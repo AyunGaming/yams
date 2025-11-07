@@ -112,6 +112,7 @@ export default function PlayerScoreCards({
             onChooseScore={onChooseScore}
             isMyTurn={myTurn && myPlayer.id === socket.id}
             canChoose={gameState.rollsLeft < 3}
+            variant={gameState.variant}
           />
         </div>
 
@@ -179,6 +180,7 @@ export default function PlayerScoreCards({
             onChooseScore={onChooseScore}
             isMyTurn={myTurn && myPlayer.id === socket.id}
             canChoose={gameState.rollsLeft < 3}
+            variant={gameState.variant}
           />
         </div>
 
@@ -261,6 +263,7 @@ export default function PlayerScoreCards({
                     onChooseScore={onChooseScore}
                     isMyTurn={false}
                     canChoose={false}
+                    variant={gameState.variant}
                   />
                 </div>
               )
