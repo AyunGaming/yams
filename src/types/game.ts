@@ -44,7 +44,7 @@ export interface GameState {
   dice: Die[]
   rollsLeft: number // 3, 2, 1, ou 0
   turnNumber: number // 1-13 (13 tours au total)
-  gameStatus: 'waiting' | 'playing' | 'finished'
+  gameStatus: 'waiting' | 'playing' | 'finished' | 'server_interrupted'
   winner: string | null
 }
 
