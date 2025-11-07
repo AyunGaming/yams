@@ -1,5 +1,7 @@
 // Types pour le jeu de Yams
 
+export type GameVariant = 'classic' | 'descending' | 'ascending'
+
 export type ScoreCategory = 
   | 'ones' | 'twos' | 'threes' | 'fours' | 'fives' | 'sixes'
   | 'threeOfKind' | 'fourOfKind' | 'fullHouse' 
@@ -47,6 +49,7 @@ export interface GameState {
   turnNumber: number // 1-13 (13 tours au total)
   gameStatus: 'waiting' | 'playing' | 'finished' | 'server_interrupted'
   winner: string | null
+  variant: GameVariant // Type de partie : classique, montante ou descendante
 }
 
 export interface RollDiceAction {
