@@ -2,7 +2,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useSupabase } from "@/components/Providers"
-import { tokenManager } from "@/lib/tokenManager"
+import { cleanupSession } from "@/lib/authUtils"
 import ThemeToggle from "./ThemeToggle"
 
 export default function Navbar() {
@@ -11,17 +11,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     setLoading(true)
-    console.log('🚪 Déconnexion en cours...')
-    
-    // Supprime les tokens
-    tokenManager.clearTokens()
-    
-    // Déconnexion Supabase
-    await supabase.auth.signOut()
-    
-    setLoading(false)
-    console.log('✅ Déconnexion réussie')
-    window.location.href = "/"
+    await cleanupSession(supabase)
   }
 
   return (
@@ -36,6 +26,7 @@ export default function Navbar() {
         {user ? (
           <>
             <Link href="/dashboard" className="btn btn-ghost">Dashboard</Link>
+            <Link href="/leaderboard" className="btn btn-ghost">🏆 Classement</Link>
             <button onClick={handleLogout} className="btn btn-outline btn-sm" disabled={loading}>
               {loading ? "..." : "Déconnexion"}
             </button>

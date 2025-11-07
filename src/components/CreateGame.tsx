@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useSupabase } from '@/components/Providers'
-import { v4 as uuidv4 } from 'uuid'
+import { generateGameId } from '@/lib/gameIdGenerator'
 import { useState } from 'react'
 
 export default function CreateGame() {
@@ -11,27 +11,47 @@ export default function CreateGame() {
   const [loading, setLoading] = useState(false)
 
   const handleCreate = async () => {
-    if (!user) return router.push('/login')
+    console.log('[CREATE] 1. Début de la création')
+    console.log('[CREATE] 2. User:', user?.id)
+    
+    if (!user) {
+      console.log('[CREATE] ❌ Pas d\'utilisateur, redirection vers login')
+      return router.push('/login')
+    }
 
     setLoading(true)
-    const id = uuidv4()
+    console.log('[CREATE] 3. Loading activé')
+    
+    const id = generateGameId()
+    console.log('[CREATE] 4. ID généré:', id)
 
-    const { error } = await supabase.from('games').insert([
-      {
-        id,
-        status: 'waiting',
-        owner: user.id,
-        created_at: new Date().toISOString(),
-      },
-    ])
+    try {
+      console.log('[CREATE] 5. Tentative d\'insertion dans Supabase...')
+      const { data, error } = await supabase.from('games').insert([
+        {
+          id,
+          status: 'waiting',
+          owner: user.id,
+          created_at: new Date().toISOString(),
+        },
+      ]).select()
 
-    setLoading(false)
+      console.log('[CREATE] 6. Réponse Supabase:', { data, error })
 
-    if (error) {
-      console.error(error)
-      alert("Erreur lors de la création de la partie.")
-    } else {
-      router.push(`/game/${id}`)
+      setLoading(false)
+      console.log('[CREATE] 7. Loading désactivé')
+
+      if (error) {
+        console.error('[CREATE] ❌ Erreur:', error)
+        alert(`Erreur lors de la création de la partie: ${error.message}`)
+      } else {
+        console.log('[CREATE] ✅ Partie créée! Redirection...')
+        router.push(`/game/${id}`)
+      }
+    } catch (err) {
+      console.error('[CREATE] ❌ Exception:', err)
+      setLoading(false)
+      alert('Erreur inattendue lors de la création de la partie')
     }
   }
 
