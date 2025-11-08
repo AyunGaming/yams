@@ -1,9 +1,10 @@
 /**
  * Client API avec gestion automatique des tokens
  */
+"use client";
 
 import { tokenManager } from './tokenManager'
-import { createClient } from './supabaseClient'
+import { createClient } from './supabase/browser'
 import { logger } from './logger'
 
 /**

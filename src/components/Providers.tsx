@@ -1,7 +1,7 @@
 'use client'
 import { ThemeProvider } from "next-themes"
 import { createContext, useContext, useEffect, useState, useCallback } from "react"
-import { createClient } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/browser"
 import { tokenManager } from "@/lib/tokenManager"
 import { handleInconsistentState } from "@/lib/authUtils"
 import { logger } from "@/lib/logger"
