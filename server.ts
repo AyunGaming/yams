@@ -15,7 +15,7 @@ import { createServer } from 'http'
 import { parse } from 'url'
 import next from 'next'
 import { Server as IOServer } from 'socket.io'
-import { createClient } from '@supabase/supabase-js'
+import { getAdminClient } from './src/lib/supabase/admin'
 import { clearAllGames } from './src/server/gameManager'
 import { createAuthMiddleware } from './src/server/socketAuthMiddleware'
 import { setupRoomHandlers } from './src/server/socketRoomHandlers'
@@ -26,17 +26,8 @@ import { setupDisconnectHandlers } from './src/server/socketDisconnectHandlers'
 const SERVER_RESTART_ID = Date.now().toString()
 console.log('[SERVER] ID de session:', SERVER_RESTART_ID)
 
-// Initialiser Supabase côté serveur
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('[SERVER] Variables d\'environnement Supabase manquantes!')
-  process.exit(1)
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+// Récupérer le client Supabase Admin
+const supabase = getAdminClient()
 
 // Configuration Next.js
 const dev = process.env.NODE_ENV !== 'production'

@@ -2,33 +2,7 @@
  * Middleware d'authentification pour Socket.IO
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
-
-// Instance Supabase (créée de manière lazy)
-let supabaseInstance: SupabaseClient | null = null
-
-/**
- * Récupère ou crée l'instance Supabase
- */
-function getSupabaseClient(): SupabaseClient {
-  if (!supabaseInstance) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl) {
-      throw new Error('❌ NEXT_PUBLIC_SUPABASE_URL est manquant dans les variables d\'environnement')
-    }
-
-    if (!supabaseServiceKey) {
-      throw new Error('❌ SUPABASE_SERVICE_ROLE_KEY ou NEXT_PUBLIC_SUPABASE_ANON_KEY est manquant')
-    }
-
-    supabaseInstance = createClient(supabaseUrl, supabaseServiceKey)
-    console.log('✅ Client Supabase initialisé pour l\'authentification')
-  }
-
-  return supabaseInstance
-}
+import { getAdminClient } from '@/lib/supabase/admin'
 
 /**
  * Vérifie un token JWT Supabase
@@ -43,8 +17,8 @@ export async function verifyToken(token: string): Promise<{
       return { valid: false, error: 'Token manquant' }
     }
 
-    // Récupérer l'instance Supabase
-    const supabase = getSupabaseClient()
+    // Récupérer le client Supabase Admin
+    const supabase = getAdminClient()
 
     // Vérifier le token avec Supabase
     const { data, error } = await supabase.auth.getUser(token)
@@ -88,8 +62,8 @@ export function extractToken(authHeader: string | undefined): string | null {
  */
 export async function getUsernameFromId(userId: string): Promise<string> {
   try {
-    // Récupérer l'instance Supabase
-    const supabase = getSupabaseClient()
+    // Récupérer le client Supabase Admin
+    const supabase = getAdminClient()
     
     const { data, error } = await supabase
       .from('users')
