@@ -15,7 +15,7 @@ import { createServer } from 'http'
 import { parse } from 'url'
 import next from 'next'
 import { Server as IOServer } from 'socket.io'
-import { getAdminClient } from './src/lib/supabase/admin'
+import { createAdminClient } from './src/lib/supabase/admin'
 import { clearAllGames } from './src/server/gameManager'
 import { createAuthMiddleware } from './src/server/socketAuthMiddleware'
 import { setupRoomHandlers } from './src/server/socketRoomHandlers'
@@ -27,7 +27,7 @@ const SERVER_RESTART_ID = Date.now().toString()
 console.log('[SERVER] ID de session:', SERVER_RESTART_ID)
 
 // Récupérer le client Supabase Admin
-const supabase = getAdminClient()
+const supabase = createAdminClient()
 
 // Configuration Next.js
 const dev = process.env.NODE_ENV !== 'production'

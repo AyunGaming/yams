@@ -1,66 +1,59 @@
-# Étape 1: Installer les dépendances
-FROM node:20-alpine AS deps
+# ============================================================
+# 1) PHASE BUILDER : Next.js + server.ts
+# ============================================================
+
+FROM node:20 AS builder
+
+# ✅ Injection des variables build-time pour Next.js
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG SUPABASE_URL
+ARG SUPABASE_SERVICE_ROLE_KEY
+
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV SUPABASE_URL=$SUPABASE_URL
+ENV SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+
 WORKDIR /app
 
-# Copier les fichiers de dépendances
-COPY package.json package-lock.json ./
+COPY package*.json ./
+RUN npm install
 
-# Installer les dépendances de production et de développement
-RUN npm ci
-
-# Étape 2: Builder l'application
-FROM node:20-alpine AS builder
-WORKDIR /app
-
-# Copier les dépendances depuis l'étape précédente
-COPY --from=deps /app/node_modules ./node_modules
+# ✅ Copie du projet
 COPY . .
 
-# Variables d'environnement pour le build (optionnelles)
-# Les vraies valeurs seront fournies au runtime
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_SUPABASE_URL=https://ajyknlaeiegwoefgevmy.supabase.co
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqeWtubGFlaWVnd29lZmdldm15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4Nzc4NjgsImV4cCI6MjA3NTQ1Mzg2OH0.0LyP_D4W0ds7SJ4fdXLsDhzlChkLcQ_dJb1poTfParg
-ENV SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqeWtubGFlaWVnd29lZmdldm15Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTg3Nzg2OCwiZXhwIjoyMDc1NDUzODY4fQ.AfJZWMQV22JN8MabalOqjwmbyumATSJPuH8CZ_LSIpc
-
-# Builder l'application Next.js
+# ✅ Build Next.js
 RUN npm run build
 
-# Étape 3: Image de production
+# ✅ Build server.ts → dist/server.js
+RUN npm run build:server
+
+
+# ============================================================
+# 2) PHASE RUNNER : Exécution prod
+# ============================================================
+
 FROM node:20-alpine AS runner
+
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 
-# Créer un utilisateur non-root pour la sécurité
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# ✅ Copie du build frontend
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
 
-# Copier le build Next.js standalone
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# ✅ Copie du build serveur custom
+COPY --from=builder /app/dist ./dist
 
-# Copier le serveur compilé et ses dépendances
-# Copier le serveur TypeScript et ses dépendances
-COPY --from=builder --chown=nextjs:nodejs /app/server.ts ./server.ts
-COPY --from=builder --chown=nextjs:nodejs /app/src ./src
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
+# ✅ Copie node_modules optimisés
+COPY --from=builder /app/node_modules ./node_modules
+COPY package*.json ./
 
-# Copier node_modules (inclut toutes les dépendances nécessaires)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-
-# Utiliser l'utilisateur non-root
-USER nextjs
-
-# Exposer le port
 EXPOSE 3000
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-# Démarrer l'application avec le serveur custom
-CMD ["node", "server.js"]
-
+# ✅ Lancement de ton serveur custom
+CMD ["node", "dist/server.js"]
