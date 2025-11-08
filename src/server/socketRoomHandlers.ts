@@ -5,7 +5,7 @@
 
 import { Server, Socket } from 'socket.io'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { initializeGame } from './gameManager'
+import { initializeGame, getGameState } from './gameManager'
 
 type Player = { id: string; name: string; userId?: string; avatar?: string }
 
@@ -71,16 +71,28 @@ export function setupRoomHandlers(
     // Rejoindre la room
     socket.join(roomId)
 
+    // Vérifier si la partie est déjà en cours
+    const roomState = roomStates.get(roomId)
+    const isGameStarted = roomState?.started || false
+
     // Récupérer les joueurs dans la room
     const players = getPlayersInRoom(io, roomId)
 
-    // Envoyer la mise à jour à tous les joueurs
-    io.to(roomId).emit('room_update', {
-      players,
-      started: false,
-    })
-
-    io.to(roomId).emit('system_message', `${playerName} a rejoint la partie`)
+    if (isGameStarted) {
+      // La partie est en cours : envoyer l'état du jeu au joueur qui se reconnecte
+      const gameState = getGameState(roomId)
+      if (gameState) {
+        console.log(`[ROOM] ${playerName} se reconnecte à une partie en cours`)
+        socket.emit('game_started', gameState)
+      }
+    } else {
+      // La partie n'a pas démarré : envoyer la room_update
+      io.to(roomId).emit('room_update', {
+        players,
+        started: false,
+      })
+      io.to(roomId).emit('system_message', `${playerName} a rejoint la partie`)
+    }
   })
 
   /**

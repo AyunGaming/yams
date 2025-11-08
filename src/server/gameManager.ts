@@ -17,6 +17,13 @@ export function clearAllGames(): void {
 }
 
 /**
+ * Récupère l'état d'une partie
+ */
+export function getGameState(roomId: string): GameState | null {
+  return games.get(roomId) || null
+}
+
+/**
  * Initialise une nouvelle partie
  */
 export function initializeGame(
