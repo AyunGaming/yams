@@ -7,36 +7,62 @@ import { tokenManager } from './tokenManager'
 import { logger } from './logger'
 
 /**
- * Déconnecte l'utilisateur avec un timeout pour éviter les blocages
- * @param supabase - Client Supabase
- * @param timeoutMs - Timeout en millisecondes (par défaut 5000)
- * @returns Promise qui se résout toujours (succès ou timeout)
+ * Supprime tous les cookies Supabase (auth-token)
+ * Utile quand signOut() échoue ou timeout
  */
-export async function signOutWithTimeout(
-  supabase: SupabaseClient,
-  timeoutMs: number = 5000
-): Promise<{ success: boolean; timedOut: boolean }> {
-  try {
-    const signOutPromise = supabase.auth.signOut()
-    const timeoutPromise = new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), timeoutMs)
-    )
-
-    await Promise.race([signOutPromise, timeoutPromise])
-    logger.success('Déconnexion Supabase réussie')
-    return { success: true, timedOut: false }
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Timeout') {
-      logger.warn('Timeout lors de la déconnexion Supabase')
-      return { success: false, timedOut: true }
+function clearSupabaseCookies(): void {
+  // Liste des cookies Supabase à supprimer
+  const cookieNames = [
+    'sb-access-token',
+    'sb-refresh-token',
+    'supabase-auth-token',
+  ]
+  
+  cookieNames.forEach(name => {
+    // Supprimer pour tous les domaines possibles
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`
+  })
+  
+  // Supprimer tous les cookies qui commencent par 'sb-' (format Supabase SSR)
+  document.cookie.split(';').forEach(cookie => {
+    const cookieName = cookie.split('=')[0].trim()
+    if (cookieName.startsWith('sb-')) {
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`
     }
-    logger.error('Erreur lors de la déconnexion:', error)
-    return { success: false, timedOut: false }
+  })
+}
+
+/**
+ * Déconnecte l'utilisateur (déconnexion LOCALE uniquement, sans appel réseau)
+ * @param supabase - Client Supabase
+ * @returns Promise qui se résout toujours avec le résultat
+ */
+export async function signOutLocal(
+  supabase: SupabaseClient
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Déconnexion locale uniquement (pas d'appel réseau à Supabase)
+    // Cela supprime la session du client mais pas du serveur
+    const { error } = await supabase.auth.signOut({ scope: 'local' })
+    
+    if (error) {
+      console.error('Erreur signOut local:', error)
+      return { success: false, error: error.message }
+    }
+    
+    console.log('✅ Déconnexion locale Supabase réussie')
+    return { success: true }
+  } catch (error) {
+    console.error('Erreur inattendue signOut:', error)
+    return { success: false, error: String(error) }
   }
 }
 
 /**
- * Nettoie complètement la session utilisateur (localStorage + Supabase)
+ * Nettoie complètement la session utilisateur (localStorage + Supabase + Cookies)
+ * Version ULTRA-SIMPLIFIÉE : déconnexion IMMÉDIATE sans attendre Supabase
  * @param supabase - Client Supabase
  * @param redirectUrl - URL de redirection après nettoyage
  */
@@ -44,17 +70,31 @@ export async function cleanupSession(
   supabase: SupabaseClient,
   redirectUrl: string = '/'
 ): Promise<void> {
-  logger.info('Nettoyage de session en cours...')
+  console.log('🚪 Déconnexion IMMÉDIATE en cours...')
 
-  const result = await signOutWithTimeout(supabase, 5000)
-
-  if (result.success) {
-    // Nettoyage après succès de signOut
+  try {
+    // 1. Nettoyage localStorage (synchrone, immédiat)
     tokenManager.clearTokens()
     localStorage.removeItem('serverRestartId')
+    console.log('✅ Tokens locaux supprimés')
+
+    // 2. Suppression cookies Supabase (synchrone, immédiat)
+    clearSupabaseCookies()
+    console.log('✅ Cookies Supabase supprimés')
+
+    // 3. Déconnexion Supabase en arrière-plan (non-bloquante)
+    // On ne l'attend PAS pour ne pas bloquer l'utilisateur
+    signOutLocal(supabase).catch(err => {
+      console.warn('⚠️ Erreur signOut Supabase (non-bloquant):', err)
+    })
+
+  } catch (error) {
+    console.error('❌ Erreur lors du nettoyage:', error)
   }
 
-  // Redirection (même en cas de timeout pour éviter l'état incohérent)
+  console.log('🔄 Redirection IMMÉDIATE vers', redirectUrl)
+  
+  // 4. Redirection IMMÉDIATE (sans délai, sans await)
   window.location.href = redirectUrl
 }
 
@@ -67,21 +107,17 @@ export async function handleInconsistentState(
   supabase: SupabaseClient,
   onCleanupComplete?: () => void
 ): Promise<void> {
-  logger.warn('État incohérent détecté - Nettoyage de la session Supabase')
+  logger.warn('État incohérent détecté - Nettoyage de la session')
 
-  const result = await signOutWithTimeout(supabase, 3000)
-
-  if (result.success) {
-    tokenManager.clearTokens()
-    localStorage.removeItem('serverRestartId')
-    logger.success('Session nettoyée avec succès')
-  } else if (result.timedOut) {
-    // En cas de timeout, rechargement automatique
-    logger.warn('Rechargement automatique pour réinitialiser l\'état')
-    setTimeout(() => {
-      window.location.reload()
-    }, 1000)
-  }
+  // Déconnexion locale
+  await signOutLocal(supabase)
+  
+  // Nettoyage complet
+  tokenManager.clearTokens()
+  localStorage.removeItem('serverRestartId')
+  clearSupabaseCookies()
+  
+  logger.success('Session nettoyée avec succès')
 
   if (onCleanupComplete) {
     onCleanupComplete()

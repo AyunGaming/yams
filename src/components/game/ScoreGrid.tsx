@@ -173,9 +173,9 @@ function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targe
   let performanceColor = ''
   if (isChosen && targetScore !== undefined && score !== null) {
     if (score >= targetScore) {
-      performanceColor = 'bg-success/20 border-l-4 border-success' // Bon score (au moins un triple)
+      performanceColor = 'bg-success/20 border-l-4 border-success border-y border-r border-base-content/20' // Bon score (au moins un triple)
     } else {
-      performanceColor = 'bg-warning/20 border-l-4 border-warning' // Score en retard
+      performanceColor = 'bg-warning/20 border-l-4 border-warning border-y border-r border-base-content/20' // Score en retard
     }
   }
   
@@ -192,10 +192,10 @@ function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targe
         w-full p-2 rounded flex justify-between items-center
         transition-colors
         ${performanceColor || (isChosen 
-          ? 'bg-base-300 cursor-default' 
+          ? 'bg-base-300 cursor-default border border-base-content/20' 
           : canChoose 
             ? 'bg-base-100 hover:bg-primary/20 cursor-pointer border border-primary/50' 
-            : 'bg-base-100 cursor-not-allowed opacity-60'
+            : 'bg-base-100 cursor-not-allowed opacity-60 border border-base-content/10'
         )}
       `}
     >

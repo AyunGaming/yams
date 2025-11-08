@@ -4,8 +4,6 @@ import { ThemeProvider } from "next-themes"
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react"
 import { createClient } from "@/lib/supabase/browser"
 import { tokenManager } from "@/lib/tokenManager"
-import { handleInconsistentState } from "@/lib/authUtils"
-import { logger } from "@/lib/logger"
 import { User, SupabaseClient } from "@supabase/supabase-js"
 import { UserProfile } from "@/types/user"
 
@@ -57,12 +55,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         .single()
 
       if (error) {
-        logger.error('Erreur profil:', error)
+        console.error('⚠️ Erreur récupération profil:', error.message)
         return
       }
       setUserProfile(data as UserProfile)
+      console.log('✅ Profil utilisateur chargé')
     } catch (error) {
-      logger.error('Erreur fetchUserProfile:', error)
+      console.error('❌ Erreur fetchUserProfile:', error)
     }
   }, [supabase])
 
@@ -70,37 +69,76 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     if (user?.id) await fetchUserProfile(user.id)
   }
 
-  // ✅ Toute la logique originale, inchangée
+  // ✅ Initialisation et gestion de l'authentification
   useEffect(() => {
     if (!supabase) return
 
-    const localToken = tokenManager.getToken()
-    const hasValidLocalToken = localToken && !tokenManager.isTokenExpired()
+    console.log('🔄 Initialisation de l\'authentification...')
     
-    if (hasValidLocalToken) {
+    // Timeout de sécurité pour éviter le blocage
+    const safetyTimeout = setTimeout(() => {
+      console.warn('⚠️ Timeout de chargement - Initialisation terminée')
       setIsLoading(false)
-    }
+    }, 3000)
 
-    const timeoutId = setTimeout(() => {
+    // Récupérer la session actuelle
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        console.error('❌ Erreur getSession:', error.message)
+        clearTimeout(safetyTimeout)
+        setIsLoading(false)
+        return
+      }
+
+      if (session) {
+        console.log('✅ Session Supabase trouvée')
+        
+        // Synchroniser le localStorage avec la session Supabase
+        setUser(session.user)
+        setAccessToken(session.access_token)
+        
+        tokenManager.setToken(session.access_token, session.expires_in ?? 3600)
+        if (session.refresh_token) {
+          tokenManager.setRefreshToken(session.refresh_token)
+        }
+        
+        // Charger le profil utilisateur (avec timeout de sécurité)
+        const profileTimeout = setTimeout(() => {
+          console.warn('⚠️ Timeout chargement profil')
+          clearTimeout(safetyTimeout)
+          setIsLoading(false)
+        }, 2000)
+
+        fetchUserProfile(session.user.id).finally(() => {
+          clearTimeout(profileTimeout)
+          clearTimeout(safetyTimeout)
+          setIsLoading(false)
+        })
+      } else {
+        console.log('ℹ️ Aucune session active')
+        
+        // Pas de session : nettoyer les tokens orphelins
+        const hasOrphanToken = tokenManager.getToken() !== null
+        if (hasOrphanToken) {
+          console.warn('⚠️ Token local sans session - Nettoyage')
+          tokenManager.clearTokens()
+        }
+        
+        clearTimeout(safetyTimeout)
+        setIsLoading(false)
+      }
+    }).catch((err) => {
+      console.error('❌ Exception getSession:', err)
+      clearTimeout(safetyTimeout)
       setIsLoading(false)
-    }, 2000)
+    })
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      try {
+    // Écouter les changements d'état d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔐 Auth state change:', event)
+        
         if (session) {
-          const hasLocalToken = tokenManager.getToken() !== null
-          
-          if (!hasLocalToken) {
-            await handleInconsistentState(supabase, () => {
-              setUser(null)
-              setUserProfile(null)
-              setAccessToken(null)
-              setIsLoading(false)
-            })
-            clearTimeout(timeoutId)
-            return
-          }
-          
           setUser(session.user)
           setAccessToken(session.access_token)
           
@@ -110,29 +148,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }
           
           fetchUserProfile(session.user.id)
-        }
-      } catch {}
-      finally {
-        clearTimeout(timeoutId)
-        setIsLoading(false)
-      }
-    }).catch(() => {
-      clearTimeout(timeoutId)
-      setIsLoading(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session) {
-          setUser(session.user)
-          setAccessToken(session.access_token)
-          
-          tokenManager.setToken(session.access_token, session.expires_in ?? 3600)
-          if (session.refresh_token) {
-            tokenManager.setRefreshToken(session.refresh_token)
-          }
-          
-          await fetchUserProfile(session.user.id)
         } else {
           setUser(null)
           setUserProfile(null)
@@ -142,11 +157,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       }
     )
 
+    // Rafraîchir le token toutes les minutes si nécessaire
     const intervalId = setInterval(async () => {
       if (!tokenManager.getToken()) return
       if (tokenManager.isTokenExpired()) {
-        const { data, error } = await supabase.auth.refreshSession()
+        const { error } = await supabase.auth.refreshSession()
         if (error) {
+          console.error('❌ Erreur refresh token:', error.message)
           tokenManager.clearTokens()
         }
       }
@@ -155,9 +172,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
       clearInterval(intervalId)
-      clearTimeout(timeoutId)
+      clearTimeout(safetyTimeout)
     }
-  }, [supabase, fetchUserProfile, user?.id])
+  }, [supabase, fetchUserProfile])
 
   // ✅ Rendu retardé, sans casser l’ordre des hooks
   if (!isReady || !supabase) return null

@@ -8,16 +8,25 @@
 import { createClient } from "@supabase/supabase-js";
 
 export function createAdminClient() {
-  const url = process.env.SUPABASE_URL;
+  // Essayer SUPABASE_URL d'abord, puis fallback sur NEXT_PUBLIC_SUPABASE_URL
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   // ✅ Sécurise le build
   if (!url || !serviceRole) {
-    console.warn("⚠️ Supabase admin client mocké (build mode).");
+    console.error("❌ Variables d'environnement manquantes pour Supabase Admin:");
+    console.error("  - SUPABASE_URL ou NEXT_PUBLIC_SUPABASE_URL:", url ? "✅" : "❌");
+    console.error("  - SUPABASE_SERVICE_ROLE_KEY:", serviceRole ? "✅" : "❌");
     return null;
   }
 
-  return createClient(url, serviceRole);
+  console.log("✅ Client Supabase Admin initialisé");
+  return createClient(url, serviceRole, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
 }
 
 
