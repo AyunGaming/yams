@@ -170,18 +170,18 @@ export default function WaitingRoom({
                   >
                     {/* Avatar */}
                     <div className="avatar">
-                      <div className="w-12 h-12 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+                      <div className="w-12 h-12 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 relative overflow-hidden">
                         {p.avatar ? (
                           <Image 
                             src={p.avatar} 
                             alt={p.name}
                             width={48}
                             height={48}
-                            className="rounded-full"
+                            className="w-full h-full object-cover"
                             unoptimized
                           />
                         ) : (
-                          <div className="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
+                          <div className="bg-primary text-primary-content rounded-full w-full h-full flex items-center justify-center">
                             <span className="text-xl font-bold">
                               {p.name.charAt(0).toUpperCase()}
                             </span>
@@ -205,15 +205,23 @@ export default function WaitingRoom({
                 {Array.from({ length: maxPlayers - players.length }).map((_, i) => (
                   <div
                     key={`empty-${i}`}
-                    className="flex items-center gap-3 bg-base-100/50 p-3 rounded-lg border-2 border-dashed border-base-content/20"
+                    className="flex items-center gap-3 bg-base-100/30 p-3 rounded-lg border-2 border-dashed border-base-content/10"
                   >
-                    <div className="avatar placeholder">
-                      <div className="bg-base-300 rounded-full w-12 h-12">
-                        <span className="text-xl">?</span>
+                    <div className="avatar">
+                      <div className="w-12 h-12 rounded-full ring ring-base-300/50 ring-offset-base-100 ring-offset-2 bg-base-300/50 relative">
+                        {/* Icône utilisateur stylisé */}
+                        <svg 
+                          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 text-base-content/30" 
+                          fill="currentColor" 
+                          viewBox="0 0 20 20"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
                       </div>
                     </div>
                     <div className="flex-1">
-                      <p className="text-base-content/50 text-sm">
+                      <p className="text-base-content/40 text-sm italic">
                         En attente d&apos;un joueur...
                       </p>
                     </div>
