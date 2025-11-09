@@ -101,14 +101,23 @@ export function setupRoomHandlers(
           // Envoyer l'état mis à jour à TOUS les joueurs (pour sync les socket.id)
           io.to(roomId).emit('game_update', updatedGameState)
           
-          // Notifier les autres joueurs de la reconnexion
-          socket.to(roomId).emit('system_message', `${playerName} s'est reconnecté`)
+          // Vérifier si le joueur est en statut abandonné
+          const reconnectingPlayer = updatedGameState.players.find(p => p.userId === userId)
+          const isAbandoned = reconnectingPlayer?.abandoned || false
           
-          // Si c'est le tour du joueur qui se reconnecte, le notifier
-          const currentPlayer = updatedGameState.players[updatedGameState.currentPlayerIndex]
-          if (currentPlayer.userId === userId) {
-            console.log(`[ROOM] C'est le tour de ${playerName} (reconnecté)`)
-            io.to(roomId).emit('system_message', `C'est au tour de ${playerName}`)
+          // Notifier les autres joueurs de la reconnexion
+          if (isAbandoned) {
+            socket.to(roomId).emit('system_message', `${playerName} s'est reconnecté (spectateur)`)
+            console.log(`[ROOM] ${playerName} se reconnecte en tant que spectateur (abandonné)`)
+          } else {
+            socket.to(roomId).emit('system_message', `${playerName} s'est reconnecté`)
+            
+            // Si c'est le tour du joueur qui se reconnecte, le notifier
+            const currentPlayer = updatedGameState.players[updatedGameState.currentPlayerIndex]
+            if (currentPlayer.userId === userId) {
+              console.log(`[ROOM] C'est le tour de ${playerName} (reconnecté)`)
+              io.to(roomId).emit('system_message', `C'est au tour de ${playerName}`)
+            }
           }
         }
       }

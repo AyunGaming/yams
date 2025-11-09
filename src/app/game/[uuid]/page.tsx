@@ -5,10 +5,11 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useSupabase } from '@/components/Providers'
 import { useGameSocket } from '@/hooks/useGameSocket'
+import { useGameProtection } from '@/contexts/GameProtectionContext'
 import {
   handleStartGame,
   handleLeaveGame,
@@ -29,13 +30,14 @@ export default function GamePage() {
   const uuid = params?.uuid as string
   const router = useRouter()
   const { user, userProfile, supabase, isLoading: authLoading } = useSupabase()
+  const { setIsInActiveGame, setSocket, setRoomId } = useGameProtection()
 
   // État du jeu via le hook personnalisé
   const { socket, players, started, isHost, gameState, gameEnded, systemMessages } = useGameSocket(
     {
       uuid,
       user,
-      supabase,
+      supabase: supabase!,
       authLoading,
       userProfile, // Passer le profil pour éviter une requête supplémentaire
     }
@@ -49,10 +51,102 @@ export default function GamePage() {
   const [variant, setVariant] = useState<GameVariant>('classic')
   const [variantLoading, setVariantLoading] = useState(true)
 
+  // Référence pour savoir si on peut quitter sans confirmation
+  const canLeaveWithoutWarning = useRef(false)
+
+  // Signaler au contexte global si on est en partie active + passer socket et roomId
+  useEffect(() => {
+    console.log('[PROTECTION] Démarrage vérification', {
+      hasGameState: !!gameState,
+      hasPlayers: !!gameState?.players,
+      started,
+      gameEnded
+    })
+    
+    // Si pas de gameState, pas de protection
+    if (!gameState || !gameState.players) {
+      console.log('[PROTECTION] Pas de gameState ou players, pas de protection')
+      setIsInActiveGame(false)
+      return
+    }
+    
+    console.log('[PROTECTION] Recherche joueur:', {
+      userId: user?.id,
+      socketId: socket?.id,
+      allPlayers: gameState.players.map(p => ({
+        name: p.name,
+        userId: p.userId,
+        socketId: p.id,
+        abandoned: p.abandoned
+      }))
+    })
+    
+    // Vérifier si le joueur actuel a abandonné (spectateur)
+    // Chercher par userId (plus fiable) ou par socket.id
+    const myPlayer = gameState.players.find(
+      p => p.userId === user?.id || p.id === socket?.id
+    )
+    const isAbandoned = myPlayer?.abandoned || false
+    
+    // Ne protéger que si en partie active ET que le joueur n'a pas abandonné
+    const isInActiveGame = started && !gameEnded && gameState.gameStatus !== 'finished' && !isAbandoned
+    
+    console.log('[PROTECTION] Résultat:', { 
+      myPlayerFound: !!myPlayer,
+      myPlayerName: myPlayer?.name,
+      myPlayerAbandoned: myPlayer?.abandoned,
+      isAbandoned, 
+      isInActiveGame
+    })
+    
+    setIsInActiveGame(isInActiveGame)
+    setSocket(socket)
+    setRoomId(uuid)
+  }, [started, gameEnded, gameState, socket, uuid, user?.id, setIsInActiveGame, setSocket, setRoomId])
+
+  // Protection contre la navigation accidentelle pendant une partie
+  useEffect(() => {
+    // Si pas de gameState, pas de protection
+    if (!gameState || !gameState.players) {
+      return
+    }
+    
+    // Vérifier si le joueur actuel a abandonné (spectateur)
+    // Chercher par userId (plus fiable) ou par socket.id
+    const myPlayer = gameState.players.find(
+      p => p.userId === user?.id || p.id === socket?.id
+    )
+    const isAbandoned = myPlayer?.abandoned || false
+    
+    console.log('[PROTECTION] beforeunload check:', {
+      isAbandoned,
+      myPlayerName: myPlayer?.name
+    })
+    
+    // Ne protéger que si la partie est en cours ET que le joueur n'a pas abandonné
+    if (!started || gameEnded || gameState.gameStatus === 'finished' || isAbandoned) {
+      return
+    }
+
+    // 1. Protection contre la fermeture/rafraîchissement de la page
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      // Le message personnalisé n'est plus supporté par les navigateurs modernes
+      // mais on doit quand même définir returnValue pour que ça marche
+      e.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [started, gameEnded, gameState, socket?.id, user?.id])
+
   // Charger la variante depuis la base de données
   useEffect(() => {
     const fetchVariant = async () => {
-      if (!uuid) return
+      if (!uuid || !supabase) return
       
       try {
         const { data, error } = await supabase
@@ -90,10 +184,13 @@ export default function GamePage() {
    */
   const onStart = () => handleStartGame(socket, uuid)
 
-  const onLeave = () =>
+  const onLeave = () => {
+    // Autoriser la navigation après avoir cliqué sur "Abandonner"
+    canLeaveWithoutWarning.current = true
     handleLeaveGame(socket, uuid, started, () => {
       router.push('/dashboard')
     })
+  }
 
   const onRollDice = () => handleRollDice(socket, uuid, setIsRolling, setRollCount)
 

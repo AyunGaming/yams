@@ -12,7 +12,7 @@ interface ScoreGridProps {
   canChoose: boolean
   variant?: GameVariant
 }
-
+ 
 const CATEGORIES = {
   upper: [
     { key: 'ones' as ScoreCategory, label: 'As (1)', description: 'Somme des 1', targetScore: 3 },

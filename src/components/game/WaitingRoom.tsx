@@ -3,7 +3,7 @@
  * Affiche les joueurs connectés, le code de la partie et les actions disponibles
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { GameVariant } from '@/types/game'
 import { VARIANT_NAMES } from '@/lib/variantLogic'
@@ -35,6 +35,14 @@ export default function WaitingRoom({
   variantLoading = false,
 }: WaitingRoomProps) {
   const [copied, setCopied] = useState(false)
+  const messagesRef = useRef<HTMLDivElement>(null)
+
+  // Scroll automatique vers le haut quand un nouveau message arrive
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = 0
+    }
+  }, [systemMessages])
 
   /**
    * Copie le code de la partie dans le presse-papier
@@ -139,15 +147,29 @@ export default function WaitingRoom({
             <div className="card bg-info/10 border border-info/30 shadow-lg">
               <div className="card-body py-4">
                 <h3 className="card-title text-sm">📢 Activité récente</h3>
-                <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {systemMessages.slice(-5).map((msg, idx) => (
-                    <p
-                      key={idx}
-                      className="text-xs text-base-content/80 py-1 border-b border-base-content/10 last:border-0"
-                    >
-                      • {msg}
-                    </p>
-                  ))}
+                <div ref={messagesRef} className="space-y-1 max-h-32 overflow-y-auto scroll-smooth">
+                  {systemMessages.slice(-5).reverse().map((msg, idx) => {
+                    // Détecter les messages de connexion/déconnexion/abandon pour les griser
+                    const isConnectionMessage = 
+                      msg.includes('rejoint') || 
+                      msg.includes('quitté') || 
+                      msg.includes('déconnecté') || 
+                      msg.includes('reconnecté') ||
+                      msg.includes('abandonné')
+                    
+                    return (
+                      <p
+                        key={idx}
+                        className={`text-xs py-1 border-b border-base-content/10 first:border-t-0 ${
+                          isConnectionMessage 
+                            ? 'text-base-content/40 italic' 
+                            : 'text-base-content/80'
+                        }`}
+                      >
+                        • {msg}
+                      </p>
+                    )
+                  })}
                 </div>
               </div>
             </div>

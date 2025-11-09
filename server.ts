@@ -48,6 +48,12 @@ async function cleanupOnStartup() {
   // Nettoyer les gestionnaires de jeu en mémoire
   clearAllGames()
 
+  // Vérifier que supabase est disponible
+  if (!supabase) {
+    console.warn('[SERVER] Supabase non disponible, impossible de marquer les parties')
+    return
+  }
+
   // Marquer les parties en cours comme interrompues dans la base de données
   try {
     const { data, error } = await supabase
@@ -109,6 +115,13 @@ app.prepare().then(async () => {
   // Stocker l'état des rooms (si la partie est démarrée ou non)
   const roomStates = new Map<string, { started: boolean }>()
 
+  // Vérifier que supabase est disponible
+  if (!supabase) {
+    console.error('[SERVER] ERREUR CRITIQUE: Supabase non disponible')
+    console.error('[SERVER] Vérifiez vos variables d\'environnement SUPABASE_SERVICE_ROLE_KEY')
+    process.exit(1)
+  }
+
   // Gestionnaires de connexion Socket.IO
   io.on('connection', (socket) => {
     // Envoyer l'ID de session serveur au client
@@ -117,7 +130,7 @@ app.prepare().then(async () => {
     // Configurer les gestionnaires d'événements
     setupRoomHandlers(io, socket, roomStates, supabase)
     setupGameHandlers(io, socket, roomStates, supabase)
-    setupDisconnectHandlers(io, socket)
+    setupDisconnectHandlers(io, socket, roomStates, supabase)
   })
 
   // Démarrer le serveur

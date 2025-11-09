@@ -170,11 +170,15 @@ export function setupGameHandlers(
       })
       roomStates.delete(roomId)
     } else {
+      // Compter les joueurs actifs (non-abandonnés)
+      const activePlayers = updatedGame.players.filter(p => !p.abandoned)
+      const activePlayersCount = activePlayers.length
+      
       // Envoyer le gameState mis à jour
       io.to(roomId).emit('game_update', updatedGame)
       io.to(roomId).emit(
         'system_message',
-        `La partie continue avec ${updatedGame.players.length} joueurs`
+        `La partie continue avec ${activePlayersCount} joueur${activePlayersCount > 1 ? 's' : ''}`
       )
 
       const currentPlayer = updatedGame.players[updatedGame.currentPlayerIndex]

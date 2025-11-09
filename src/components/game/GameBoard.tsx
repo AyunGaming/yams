@@ -43,6 +43,14 @@ export default function GameBoard({
   // Références pour détecter les changements de tour
   const previousMyTurnRef = useRef<boolean | null>(null)
   const isFirstRenderRef = useRef(true)
+  const messagesRef = useRef<HTMLDivElement>(null)
+
+  // Scroll automatique vers le haut quand un nouveau message arrive
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = 0
+    }
+  }, [systemMessages])
 
   // Scroll automatique quand c'est mon tour
   useEffect(() => {
@@ -204,12 +212,29 @@ export default function GameBoard({
                 <span className="text-lg">📢</span>
                 <div className="flex-1">
                   <p className="text-xs font-semibold mb-2">Activité récente</p>
-                  <div className="space-y-1 max-h-20 overflow-y-auto">
-                    {systemMessages.slice(-4).map((msg, idx) => (
-                      <p key={idx} className="text-xs text-base-content/80">
-                        • {msg}
-                      </p>
-                    ))}
+                  <div ref={messagesRef} className="space-y-1 max-h-20 overflow-y-auto scroll-smooth">
+                    {systemMessages.slice(-4).reverse().map((msg, idx) => {
+                      // Détecter les messages de connexion/déconnexion/abandon pour les griser
+                      const isConnectionMessage = 
+                        msg.includes('rejoint') || 
+                        msg.includes('quitté') || 
+                        msg.includes('déconnecté') || 
+                        msg.includes('reconnecté') ||
+                        msg.includes('abandonné')
+                      
+                      return (
+                        <p 
+                          key={idx} 
+                          className={`text-xs py-1 border-b border-base-content/10 first:border-t-0 ${
+                            isConnectionMessage 
+                              ? 'text-base-content/40 italic' 
+                              : 'text-base-content/80'
+                          }`}
+                        >
+                          • {msg}
+                        </p>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
