@@ -205,48 +205,55 @@ export default function GameBoard({
         )}
 
         {/* Messages système en haut des fiches */}
-        {systemMessages.length > 0 && (
-          <div className="card bg-info/10 border border-info/30 shadow-lg max-w-3xl mx-auto">
-            <div className="card-body py-3">
-              <div className="flex items-start gap-2">
-                <span className="text-lg">📢</span>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold mb-2">Activité récente</p>
-                  <div ref={messagesRef} className="space-y-1 max-h-20 overflow-y-auto scroll-smooth">
-                    {systemMessages.slice(-4).reverse().map((msg, idx) => {
-                      // Détecter les messages de connexion/déconnexion/abandon pour les griser
-                      const isConnectionMessage = 
-                        msg.includes('rejoint') || 
-                        msg.includes('quitté') || 
-                        msg.includes('déconnecté') || 
-                        msg.includes('reconnecté') ||
-                        msg.includes('abandonné')
-                      
-                      // Calculer l'opacité en fonction de l'index (plus récent = plus opaque)
-                      // idx 0 = 100%, idx 1 = 70%, idx 2 = 50%, idx 3 = 30%
-                      const opacityClass = idx === 0 ? 'opacity-100' : 
-                                          idx === 1 ? 'opacity-70' : 
-                                          idx === 2 ? 'opacity-50' : 'opacity-30'
-                      
-                      return (
-                        <p 
-                          key={idx} 
-                          className={`text-xs py-1 border-b border-base-content/10 first:border-t-0 transition-opacity duration-300 ${opacityClass} ${
-                            isConnectionMessage 
-                              ? 'text-base-content/40 italic' 
-                              : 'text-base-content/80'
-                          }`}
-                        >
-                          • {msg}
-                        </p>
-                      )
-                    })}
+        {systemMessages.length > 0 && (() => {
+          // Calculer le nombre maximum de messages : 3 × nombre de joueurs
+          const maxMessages = gameState.players.length * 3
+          const messagesToShow = systemMessages.slice(-maxMessages).reverse()
+          
+          return (
+            <div className="card bg-info/10 border border-info/30 shadow-lg max-w-3xl mx-auto">
+              <div className="card-body py-3">
+                <div className="flex items-start gap-2">
+                  <span className="text-lg">📢</span>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold mb-2">Activité récente</p>
+                    <div ref={messagesRef} className="space-y-1 max-h-20 overflow-y-auto scroll-smooth">
+                      {messagesToShow.map((msg, idx) => {
+                        // Détecter les messages de connexion/déconnexion/abandon pour les griser
+                        const isConnectionMessage = 
+                          msg.includes('rejoint') || 
+                          msg.includes('quitté') || 
+                          msg.includes('déconnecté') || 
+                          msg.includes('reconnecté') ||
+                          msg.includes('abandonné')
+                        
+                        // Calculer l'opacité progressivement (plus récent = plus opaque)
+                        // Le message le plus récent (idx 0) a une opacité de 100%
+                        // L'opacité diminue progressivement jusqu'à 30% pour le plus ancien
+                        const opacityPercent = Math.max(30, 100 - (idx * 70 / Math.max(1, messagesToShow.length - 1)))
+                        const opacityStyle = { opacity: opacityPercent / 100 }
+                        
+                        return (
+                          <p 
+                            key={idx} 
+                            style={opacityStyle}
+                            className={`text-xs py-1 border-b border-base-content/10 first:border-t-0 transition-opacity duration-300 ${
+                              isConnectionMessage 
+                                ? 'text-base-content/40 italic' 
+                                : 'text-base-content/80'
+                            }`}
+                          >
+                            • {msg}
+                          </p>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Grilles de score */}
         <PlayerScoreCards
@@ -259,4 +266,3 @@ export default function GameBoard({
     </div>
   )
 }
-
