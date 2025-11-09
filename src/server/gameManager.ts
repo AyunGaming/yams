@@ -53,7 +53,7 @@ export function initializeGame(
 ): GameState {
   const gameState: GameState = {
     roomId,
-    players: players.map(p => ({
+    players: players.sort(() => Math.random() - 0.5).map(p => ({
       id: p.id,
       name: p.name,
       userId: p.userId,
