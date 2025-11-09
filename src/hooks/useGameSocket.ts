@@ -20,6 +20,7 @@ interface UseGameSocketParams {
   supabase: SupabaseClient
   authLoading: boolean
   userProfile?: UserProfile | null
+  shouldConnect?: boolean // Permet de retarder la connexion
 }
 
 interface UseGameSocketReturn {
@@ -42,6 +43,7 @@ export function useGameSocket({
   supabase,
   authLoading,
   userProfile,
+  shouldConnect = true, // Par défaut, on se connecte
 }: UseGameSocketParams): UseGameSocketReturn {
   const router = useRouter()
   const socketRef = useRef<Socket | null>(null)
@@ -58,6 +60,12 @@ export function useGameSocket({
     // Attendre que l'authentification soit vérifiée
     if (authLoading) return
 
+    // Ne pas se connecter si shouldConnect est false
+    if (!shouldConnect) {
+      logger.debug('Socket: connexion bloquée (shouldConnect=false)')
+      return
+    }
+
     // Rediriger vers login si pas connecté
     if (!user) {
       router.push('/login')
@@ -70,6 +78,8 @@ export function useGameSocket({
     if (socketRef.current || isConnectingRef.current) {
       return
     }
+
+    logger.debug('Socket: démarrage de la connexion (shouldConnect=true)')
 
     /**
      * Récupère le username de l'utilisateur (optimisé)
@@ -234,6 +244,13 @@ export function useGameSocket({
         setGameEnded(true)
       })
 
+      // Partie introuvable (pas d'alerte car déjà gérée côté client)
+      newSocket.on('game_not_found', (data: { message: string }) => {
+        logger.error('Partie introuvable:', data.message)
+        // Redirection silencieuse car l'alerte a déjà été affichée côté client
+        router.replace('/dashboard')
+      })
+
       // Erreur de connexion
       newSocket.on('connect_error', (error) => {
         logger.error('Erreur de connexion:', error)
@@ -257,7 +274,7 @@ export function useGameSocket({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uuid, user, authLoading])
+  }, [uuid, user, authLoading, shouldConnect])
 
   return {
     socket: socketRef.current,

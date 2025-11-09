@@ -46,6 +46,36 @@ export function setupRoomHandlers(
       return
     }
 
+    // SÉCURITÉ : Vérifier que la partie existe dans la base de données
+    try {
+      const { data: gameData, error: gameError } = await supabase
+        .from('games')
+        .select('id, status')
+        .eq('id', roomId)
+        .single()
+
+      if (gameError || !gameData) {
+        console.log(`[ROOM] ❌ Tentative de rejoindre une partie inexistante: ${roomId}`)
+        socket.emit('game_not_found', { 
+          message: 'Cette partie n\'existe pas ou a été supprimée.' 
+        })
+        return
+      }
+
+      // Vérifier que la partie n'est pas déjà terminée
+      if (gameData.status === 'finished') {
+        console.log(`[ROOM] ❌ Tentative de rejoindre une partie terminée: ${roomId}`)
+        socket.emit('game_not_found', { 
+          message: 'Cette partie est terminée.' 
+        })
+        return
+      }
+    } catch (err) {
+      console.error('[ROOM] Erreur lors de la vérification de la partie:', err)
+      socket.emit('error', { message: 'Erreur lors de la vérification de la partie' })
+      return
+    }
+
     // Utiliser le username authentifié
     const playerName = socket.data.username
     socket.data.playerName = playerName

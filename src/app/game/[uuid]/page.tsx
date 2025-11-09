@@ -32,6 +32,10 @@ export default function GamePage() {
   const { user, userProfile, supabase, isLoading: authLoading } = useSupabase()
   const { setIsInActiveGame, setSocket, setRoomId } = useGameProtection()
 
+  // Vérification de l'existence de la partie
+  const [gameExists, setGameExists] = useState<boolean | null>(null)
+  const isRedirectingRef = useRef(false)
+
   // État du jeu via le hook personnalisé
   const { socket, players, started, isHost, gameState, gameEnded, systemMessages } = useGameSocket(
     {
@@ -40,6 +44,7 @@ export default function GamePage() {
       supabase: supabase!,
       authLoading,
       userProfile, // Passer le profil pour éviter une requête supplémentaire
+      shouldConnect: gameExists === true, // Ne se connecter que si la partie existe
     }
   )
 
@@ -121,7 +126,7 @@ export default function GamePage() {
     console.log('[PROTECTION] beforeunload check:', {
       isAbandoned,
       myPlayerName: myPlayer?.name
-    })
+    }) 
     
     // Ne protéger que si la partie est en cours ET que le joueur n'a pas abandonné
     if (!started || gameEnded || gameState.gameStatus === 'finished' || isAbandoned) {
@@ -143,30 +148,54 @@ export default function GamePage() {
     }
   }, [started, gameEnded, gameState, socket?.id, user?.id])
 
-  // Charger la variante depuis la base de données
+  // SÉCURITÉ : Vérifier l'existence de la partie AVANT tout
   useEffect(() => {
-    const fetchVariant = async () => {
-      if (!uuid || !supabase) return
+    const checkGameExists = async () => {
+      if (!uuid || !supabase || authLoading || isRedirectingRef.current) return
       
       try {
         const { data, error } = await supabase
           .from('games')
-          .select('variant')
+          .select('id, status, variant')
           .eq('id', uuid)
           .single()
         
-        if (!error && data) {
-          setVariant(data.variant || 'classic')
+        if (error || !data) {
+          console.log('[GAME] ❌ Partie introuvable:', uuid)
+          if (!isRedirectingRef.current) {
+            isRedirectingRef.current = true
+            alert('Cette partie n\'existe pas ou a été supprimée.')
+            router.replace('/dashboard')
+          }
+          return
         }
-      } catch (err) {
-        console.error('Erreur lors de la récupération de la variante:', err)
-      } finally {
+
+        if (data.status === 'finished') {
+          console.log('[GAME] ❌ Partie déjà terminée:', uuid)
+          if (!isRedirectingRef.current) {
+            isRedirectingRef.current = true
+            alert('Cette partie est déjà terminée.')
+            router.replace('/dashboard')
+          }
+          return
+        }
+
+        // La partie existe, on peut continuer
+        setGameExists(true)
+        setVariant(data.variant || 'classic')
         setVariantLoading(false)
+      } catch (err) {
+        console.error('Erreur lors de la vérification de la partie:', err)
+        if (!isRedirectingRef.current) {
+          isRedirectingRef.current = true
+          alert('Erreur lors de la vérification de la partie.')
+          router.replace('/dashboard')
+        }
       }
     }
     
-    fetchVariant()
-  }, [uuid, supabase])
+    checkGameExists()
+  }, [uuid, supabase, authLoading, router])
 
   // Gérer l'animation des dés
   useEffect(() => {
@@ -201,6 +230,16 @@ export default function GamePage() {
   /**
    * Affichage conditionnel selon l'état de la partie
    */
+
+  // Vérification de l'existence de la partie en cours
+  if (gameExists === null) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh]">
+        <span className="loading loading-spinner loading-lg"></span>
+        <p className="mt-4">Vérification de la partie...</p>
+      </div>
+    )
+  }
 
   // Salle d'attente
   if (!started) {

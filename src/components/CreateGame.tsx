@@ -19,8 +19,8 @@ export default function CreateGame() {
     console.log('[CREATE] 2. User:', user?.id)
     console.log('[CREATE] Variante choisie:', selectedVariant)
     
-    if (!user) {
-      console.log('[CREATE] ❌ Pas d\'utilisateur, redirection vers login')
+    if (!user || !supabase) {
+      console.log('[CREATE] ❌ Pas d\'utilisateur ou supabase, redirection vers login')
       return router.push('/login')
     }
 
@@ -53,6 +53,8 @@ export default function CreateGame() {
       } else {
         console.log('[CREATE] ✅ Partie créée! Redirection...')
         setShowModal(false)
+        // Petit délai pour laisser Supabase répliquer les données
+        await new Promise(resolve => setTimeout(resolve, 200))
         router.push(`/game/${id}`)
       }
     } catch (err) {
