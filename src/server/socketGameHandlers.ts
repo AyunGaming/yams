@@ -242,5 +242,18 @@ export function setupGameHandlers(
       })
     }
   )
+
+  /**
+   * Gestion du départ de l'hôte d'une partie terminée
+   * Redirige automatiquement tous les autres joueurs vers le dashboard
+   */
+  socket.on('host_leaving_finished_game', (roomId: string) => {
+    console.log('[GAME] Hôte quitte la partie terminée:', roomId)
+    
+    // Notifier tous les autres joueurs de retourner au dashboard
+    socket.to(roomId).emit('host_left_finished_game', {
+      message: 'L\'hôte a quitté la partie. Redirection vers le dashboard...'
+    })
+  })
 }
 

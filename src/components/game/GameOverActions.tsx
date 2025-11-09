@@ -117,6 +117,15 @@ export default function GameOverActions({
    * Retourner au dashboard
    */
   const goToDashboard = () => {
+    // Si je suis l'hôte, notifier les autres joueurs
+    if (amIHost && socket) {
+      socket.emit('host_leaving_finished_game', gameState.roomId)
+    }
+    
+    // Déconnecter et rediriger
+    if (socket) {
+      socket.disconnect()
+    }
     router.push('/dashboard')
   }
 

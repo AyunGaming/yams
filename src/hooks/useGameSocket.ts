@@ -250,6 +250,13 @@ export function useGameSocket({
         setGameEnded(true)
       })
 
+      // L'hôte a quitté une partie terminée -> rediriger vers le dashboard
+      newSocket.on('host_left_finished_game', (data: { message: string }) => {
+        logger.info('Hôte a quitté la partie terminée:', data.message)
+        alert(data.message)
+        router.replace('/dashboard')
+      })
+
       // Dés lancés (pour déclencher l'animation chez tous les joueurs)
       newSocket.on('dice_rolled', () => {
         setDiceRolledTrigger(prev => prev + 1)
