@@ -26,14 +26,22 @@ export function handleLeaveGame(
   if (socket) {
     if (started) {
       // Si la partie est démarrée, c'est un abandon
+      // Émettre l'événement et attendre un peu pour qu'il soit traité par le serveur
       socket.emit('abandon_game', roomId)
+      // Laisser 100ms pour que l'événement arrive au serveur avant de déconnecter
+      setTimeout(() => {
+        socket.disconnect()
+        onComplete()
+      }, 100)
     } else {
       // Sinon, c'est juste quitter la salle d'attente
       socket.emit('leave_room', roomId)
+      socket.disconnect()
+      onComplete()
     }
-    socket.disconnect()
+  } else {
+    onComplete()
   }
-  onComplete()
 }
 
 /**

@@ -69,6 +69,13 @@ export function setupDisconnectHandlers(
             // Partie déjà terminée, pas besoin de timer d'abandon
             return
           }
+
+          // Vérifier si c'est un abandon volontaire (bouton Abandonner)
+          if (socket.data.voluntaryAbandon) {
+            console.log(`[DISCONNECT] ${playerName} a abandonné volontairement, pas de délai de grâce`)
+            // Pas de timer de grâce pour un abandon volontaire
+            return
+          }
           
           // Partie en cours : attendre 60 secondes avant de considérer comme abandonné
           const userId = socket.data.userId

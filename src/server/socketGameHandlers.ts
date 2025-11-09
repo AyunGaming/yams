@@ -132,6 +132,9 @@ export function setupGameHandlers(
       return
     }
 
+    // Marquer qu'il s'agit d'un abandon volontaire pour éviter le délai de grâce
+    socket.data.voluntaryAbandon = true
+
     // Récupérer le gameState AVANT de retirer le joueur pour sauvegarder ses stats
     const gameBeforeRemoval = getGame(roomId)
 
