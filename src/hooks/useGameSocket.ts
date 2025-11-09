@@ -32,6 +32,7 @@ interface UseGameSocketReturn {
   gameEnded: boolean
   systemMessages: string[]
   isConnecting: boolean
+  roomJoined: boolean // Indique si le serveur a confirmé l'accès à la room
 }
 
 /**
@@ -55,6 +56,7 @@ export function useGameSocket({
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [gameEnded, setGameEnded] = useState(false)
   const [systemMessages, setSystemMessages] = useState<string[]>([])
+  const [roomJoined, setRoomJoined] = useState(false)
 
   useEffect(() => {
     // Attendre que l'authentification soit vérifiée
@@ -221,12 +223,14 @@ export function useGameSocket({
         setStarted(room.started)
         const amIHost = room.players[0]?.id === newSocket.id
         setIsHost(amIHost)
+        setRoomJoined(true) // Confirmation que le serveur a accepté l'accès à la room
       })
 
       // Partie démarrée
       newSocket.on('game_started', (initialState: GameState) => {
         setStarted(true)
         setGameState(initialState)
+        setRoomJoined(true) // Confirmation que le serveur a accepté l'accès à la room
       })
 
       // Mise à jour du jeu
@@ -251,6 +255,24 @@ export function useGameSocket({
         router.replace('/dashboard')
       })
 
+      // Erreur générale (ex: tentative de jouer contre soi-même)
+      newSocket.on('error', (data: { message: string }) => {
+        logger.error('Erreur:', data.message)
+        
+        // Déconnecter et nettoyer le socket
+        if (socketRef.current) {
+          socketRef.current.removeAllListeners()
+          socketRef.current.disconnect()
+          socketRef.current = null
+        }
+        isConnectingRef.current = false
+        setRoomJoined(false) // Accès refusé
+        
+        // Afficher l'alerte puis rediriger vers le dashboard
+        alert(data.message)
+        router.replace('/dashboard')
+      })
+
       // Erreur de connexion
       newSocket.on('connect_error', (error) => {
         logger.error('Erreur de connexion:', error)
@@ -272,6 +294,7 @@ export function useGameSocket({
         socketRef.current = null
         isConnectingRef.current = false
       }
+      setRoomJoined(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uuid, user, authLoading, shouldConnect])
@@ -285,6 +308,7 @@ export function useGameSocket({
     gameEnded,
     systemMessages,
     isConnecting: isConnectingRef.current,
+    roomJoined,
   }
 }
 

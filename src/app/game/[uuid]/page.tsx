@@ -37,7 +37,7 @@ export default function GamePage() {
   const isRedirectingRef = useRef(false)
 
   // État du jeu via le hook personnalisé
-  const { socket, players, started, isHost, gameState, gameEnded, systemMessages } = useGameSocket(
+  const { socket, players, started, isHost, gameState, gameEnded, systemMessages, roomJoined } = useGameSocket(
     {
       uuid,
       user,
@@ -237,6 +237,16 @@ export default function GamePage() {
       <div className="flex flex-col items-center justify-center min-h-[70vh]">
         <span className="loading loading-spinner loading-lg"></span>
         <p className="mt-4">Vérification de la partie...</p>
+      </div>
+    )
+  }
+
+  // Attente de confirmation du serveur avant d'afficher la waiting room
+  if (!started && !roomJoined) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh]">
+        <span className="loading loading-spinner loading-lg"></span>
+        <p className="mt-4">Connexion à la partie...</p>
       </div>
     )
   }

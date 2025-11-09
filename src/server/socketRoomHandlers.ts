@@ -98,12 +98,50 @@ export function setupRoomHandlers(
       }
     }
 
-    // Rejoindre la room
-    socket.join(roomId)
-
     // Vérifier si la partie est déjà en cours
     const roomState = roomStates.get(roomId)
     const isGameStarted = roomState?.started || false
+
+    // SÉCURITÉ : Vérifier avant de rejoindre la room
+    if (!isGameStarted) {
+      // Partie pas encore démarrée : vérifier que l'utilisateur n'est pas déjà dans la waiting room
+      const existingPlayers = getPlayersInRoom(io, roomId)
+      const alreadyInRoom = existingPlayers.some(player => 
+        player.userId && player.userId === userId && player.id !== socket.id
+      )
+      
+      if (alreadyInRoom) {
+        console.log(`[ROOM] ❌ ${playerName} (${userId}) tente de rejoindre une partie où il est déjà présent`)
+        socket.emit('error', { 
+          message: 'Vous êtes déjà dans cette partie. Vous ne pouvez pas jouer contre vous-même.' 
+        })
+        // Déconnecter le socket après un court délai pour s'assurer que le message soit envoyé
+        setTimeout(() => {
+          socket.disconnect()
+        }, 100)
+        return
+      }
+    } else {
+      // Partie en cours : vérifier que l'utilisateur fait partie de cette partie (reconnexion légitime)
+      const gameState = getGameState(roomId)
+      if (gameState && userId) {
+        const isPlayerInGame = gameState.players.some(p => p.userId === userId)
+        if (!isPlayerInGame) {
+          console.log(`[ROOM] ❌ ${playerName} (${userId}) tente de rejoindre une partie en cours où il n'est pas joueur`)
+          socket.emit('error', { 
+            message: 'Vous ne pouvez pas rejoindre cette partie en cours.' 
+          })
+          // Déconnecter le socket après un court délai pour s'assurer que le message soit envoyé
+          setTimeout(() => {
+            socket.disconnect()
+          }, 100)
+          return
+        }
+      }
+    }
+
+    // Rejoindre la room (seulement après toutes les vérifications)
+    socket.join(roomId)
 
     // Récupérer les joueurs dans la room
     const players = getPlayersInRoom(io, roomId)
