@@ -5,49 +5,13 @@
 
 import { Server, Socket } from 'socket.io'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { initializeGame, getGameState, updatePlayerSocketId, startTurnTimer, handleTimerExpired } from './gameManager'
-import { cancelDisconnectTimer } from './socketDisconnectHandlers'
-import { getCategoryLabel } from '../lib/categoryLabels'
+import { initializeGame } from './gameManager'
+import { startTurnTimerWithCallbacks } from './timerUtils'
+import { updateGameStatus } from './gameDbUtils'
+import { verifyGameExists, verifyNotAlreadyInWaitingRoom, verifyCanReconnectToGame, fetchUserAvatar } from './roomSecurityHelpers'
+import { handlePlayerReconnection } from './roomReconnectionHelpers'
 
 type Player = { id: string; name: string; userId?: string; avatar?: string }
-
-/**
- * Fonction helper pour gérer l'expiration du timer et redémarrer le timer suivant
- */
-function handleTimerExpiredAndRestart(io: Server, roomId: string) {
-  const result = handleTimerExpired(roomId)
-  if (!result) return
-  
-  const { gameState: updatedGameState, category, score, playerName } = result
-  
-  // Message de score avec (afk)
-  const categoryLabel = getCategoryLabel(category)
-  const message = `${playerName} a marqué ${score} point${score > 1 ? 's' : ''} en ${categoryLabel} (afk)`
-  console.log('[TIMER] Émission du message système:', message)
-  io.to(roomId).emit('system_message', message)
-  
-  io.to(roomId).emit('game_update', updatedGameState)
-  
-  // Si la partie est terminée
-  if (updatedGameState.gameStatus === 'finished') {
-    io.to(roomId).emit('game_ended', {
-      winner: updatedGameState.winner,
-      reason: 'completed',
-      message: `${updatedGameState.winner} remporte la partie !`,
-    })
-  } else {
-    // Redémarrer le timer pour le joueur suivant
-    const currentPlayer = updatedGameState.players[updatedGameState.currentPlayerIndex]
-    io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
-    
-    // Redémarrer le timer (appel récursif)
-    startTurnTimer(
-      roomId,
-      () => handleTimerExpiredAndRestart(io, roomId),
-      (timeLeft: number) => io.to(roomId).emit('turn_timer_update', timeLeft)
-    )
-  }
-}
 
 /**
  * Récupère les joueurs dans une room
@@ -87,34 +51,8 @@ export function setupRoomHandlers(
     }
 
     // SÉCURITÉ : Vérifier que la partie existe dans la base de données
-    try {
-      const { data: gameData, error: gameError } = await supabase
-        .from('games')
-        .select('id, status')
-        .eq('id', roomId)
-        .single()
-
-      if (gameError || !gameData) {
-        console.log(`[ROOM] ❌ Tentative de rejoindre une partie inexistante: ${roomId}`)
-        socket.emit('game_not_found', { 
-          message: 'Cette partie n\'existe pas ou a été supprimée.' 
-        })
-        return
-      }
-
-      // Vérifier que la partie n'est pas déjà terminée
-      if (gameData.status === 'finished') {
-        console.log(`[ROOM] ❌ Tentative de rejoindre une partie terminée: ${roomId}`)
-        socket.emit('game_not_found', { 
-          message: 'Cette partie est terminée.' 
-        })
-        return
-      }
-    } catch (err) {
-      console.error('[ROOM] Erreur lors de la vérification de la partie:', err)
-      socket.emit('error', { message: 'Erreur lors de la vérification de la partie' })
-      return
-    }
+    const gameExists = await verifyGameExists(supabase, roomId, socket)
+    if (!gameExists) return
 
     // Utiliser le username authentifié
     const playerName = socket.data.username
@@ -123,19 +61,7 @@ export function setupRoomHandlers(
     // Récupérer l'avatar de l'utilisateur depuis la base de données
     const userId = socket.data.userId
     if (userId) {
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('avatar_url')
-          .eq('id', userId)
-          .single()
-
-        if (!error && data) {
-          socket.data.avatar = data.avatar_url
-        }
-      } catch (err) {
-        console.error('[ROOM] Erreur lors de la récupération de l\'avatar:', err)
-      }
+      socket.data.avatar = await fetchUserAvatar(supabase, userId)
     }
 
     // Vérifier si la partie est déjà en cours
@@ -145,39 +71,12 @@ export function setupRoomHandlers(
     // SÉCURITÉ : Vérifier avant de rejoindre la room
     if (!isGameStarted) {
       // Partie pas encore démarrée : vérifier que l'utilisateur n'est pas déjà dans la waiting room
-      const existingPlayers = getPlayersInRoom(io, roomId)
-      const alreadyInRoom = existingPlayers.some(player => 
-        player.userId && player.userId === userId && player.id !== socket.id
-      )
-      
-      if (alreadyInRoom) {
-        console.log(`[ROOM] ❌ ${playerName} (${userId}) tente de rejoindre une partie où il est déjà présent`)
-        socket.emit('error', { 
-          message: 'Vous êtes déjà dans cette partie. Vous ne pouvez pas jouer contre vous-même.' 
-        })
-        // Déconnecter le socket après un court délai pour s'assurer que le message soit envoyé
-        setTimeout(() => {
-          socket.disconnect()
-        }, 100)
-        return
-      }
+      const canJoin = verifyNotAlreadyInWaitingRoom(io, roomId, userId, socket.id, socket, getPlayersInRoom)
+      if (!canJoin) return
     } else {
       // Partie en cours : vérifier que l'utilisateur fait partie de cette partie (reconnexion légitime)
-      const gameState = getGameState(roomId)
-      if (gameState && userId) {
-        const isPlayerInGame = gameState.players.some(p => p.userId === userId)
-        if (!isPlayerInGame) {
-          console.log(`[ROOM] ❌ ${playerName} (${userId}) tente de rejoindre une partie en cours où il n'est pas joueur`)
-          socket.emit('error', { 
-            message: 'Vous ne pouvez pas rejoindre cette partie en cours.' 
-          })
-          // Déconnecter le socket après un court délai pour s'assurer que le message soit envoyé
-          setTimeout(() => {
-            socket.disconnect()
-          }, 100)
-          return
-        }
-      }
+      const canReconnect = verifyCanReconnectToGame(roomId, userId, socket)
+      if (!canReconnect) return
     }
 
     // Rejoindre la room (seulement après toutes les vérifications)
@@ -188,53 +87,7 @@ export function setupRoomHandlers(
 
     if (isGameStarted) {
       // La partie est en cours : gérer la reconnexion
-      const gameState = getGameState(roomId)
-      if (gameState) {
-        console.log(`[ROOM] ${playerName} se reconnecte à une partie en cours`)
-        
-        // Mettre à jour le socket.id du joueur dans le gameState
-        if (userId) {
-          const updated = updatePlayerSocketId(roomId, userId, socket.id)
-          if (updated) {
-            console.log(`[ROOM] Socket.id mis à jour pour ${playerName}`)
-          }
-          
-          // Annuler le timer de déconnexion si il existe
-          const timerCancelled = cancelDisconnectTimer(roomId, userId)
-          if (timerCancelled) {
-            console.log(`[ROOM] Timer de déconnexion annulé pour ${playerName}`)
-          }
-        }
-        
-        // Récupérer l'état mis à jour
-        const updatedGameState = getGameState(roomId)
-        if (updatedGameState) {
-          // Envoyer l'état actuel au joueur qui se reconnecte
-          socket.emit('game_started', updatedGameState)
-          
-          // Envoyer l'état mis à jour à TOUS les joueurs (pour sync les socket.id)
-          io.to(roomId).emit('game_update', updatedGameState)
-          
-          // Vérifier si le joueur est en statut abandonné
-          const reconnectingPlayer = updatedGameState.players.find(p => p.userId === userId)
-          const isAbandoned = reconnectingPlayer?.abandoned || false
-          
-          // Notifier les autres joueurs de la reconnexion
-          if (isAbandoned) {
-            socket.to(roomId).emit('system_message', `${playerName} s'est reconnecté (spectateur)`)
-            console.log(`[ROOM] ${playerName} se reconnecte en tant que spectateur (abandonné)`)
-          } else {
-            socket.to(roomId).emit('system_message', `${playerName} s'est reconnecté`)
-            
-            // Si c'est le tour du joueur qui se reconnecte, le notifier
-            const currentPlayer = updatedGameState.players[updatedGameState.currentPlayerIndex]
-            if (currentPlayer.userId === userId) {
-              console.log(`[ROOM] C'est le tour de ${playerName} (reconnecté)`)
-              io.to(roomId).emit('system_message', `C'est au tour de ${playerName}`)
-            }
-          }
-        }
-      }
+      handlePlayerReconnection(io, socket, roomId, userId, playerName)
     } else {
       // La partie n'a pas démarré : envoyer la room_update
       io.to(roomId).emit('room_update', {
@@ -275,15 +128,7 @@ export function setupRoomHandlers(
     const gameState = initializeGame(roomId, players, variant)
 
     // Mettre à jour le status dans la base de données
-    supabase
-      .from('games')
-      .update({ status: 'in_progress' })
-      .eq('id', roomId)
-      .then(({ error }) => {
-        if (error) {
-          console.error('[GAME] Erreur lors de la mise à jour du status:', error)
-        }
-      })
+    updateGameStatus(supabase, roomId, 'in_progress')
 
     // Émettre l'événement de démarrage
     io.to(roomId).emit('game_started', gameState)
@@ -296,11 +141,7 @@ export function setupRoomHandlers(
     io.to(roomId).emit('system_message', `C'est au tour de ${firstPlayer.name}`)
     
     // Démarrer le timer pour le premier tour
-    startTurnTimer(
-      roomId,
-      () => handleTimerExpiredAndRestart(io, roomId),
-      (timeLeft: number) => io.to(roomId).emit('turn_timer_update', timeLeft)
-    )
+    startTurnTimerWithCallbacks(io, roomId)
   })
 
   /**

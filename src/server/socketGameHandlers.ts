@@ -5,48 +5,12 @@
 
 import { Server, Socket } from 'socket.io'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { rollDice, toggleDieLock, chooseScore, removePlayer, getGame, startTurnTimer, handleTimerExpired } from './gameManager'
+import { rollDice, toggleDieLock, chooseScore, removePlayer, getGame } from './gameManager'
 import { ScoreCategory } from '../types/game'
 import { updateUserStats, countYamsInScoreSheet } from '../lib/userStats'
 import { getCategoryLabel } from '../lib/categoryLabels'
-
-/**
- * Fonction helper pour gérer l'expiration du timer et redémarrer le timer suivant
- */
-function handleTimerExpiredAndRestart(io: Server, roomId: string) {
-  const result = handleTimerExpired(roomId)
-  if (!result) return
-  
-  const { gameState: updatedGameState, category, score, playerName } = result
-  
-  // Message de score avec (afk)
-  const categoryLabel = getCategoryLabel(category)
-  const message = `${playerName} a marqué ${score} point${score > 1 ? 's' : ''} en ${categoryLabel} (afk)`
-  console.log('[TIMER] Émission du message système:', message)
-  io.to(roomId).emit('system_message', message)
-  
-  io.to(roomId).emit('game_update', updatedGameState)
-  
-  // Si la partie est terminée
-  if (updatedGameState.gameStatus === 'finished') {
-    io.to(roomId).emit('game_ended', {
-      winner: updatedGameState.winner,
-      reason: 'completed',
-      message: `${updatedGameState.winner} remporte la partie !`,
-    })
-  } else {
-    // Redémarrer le timer pour le joueur suivant
-    const currentPlayer = updatedGameState.players[updatedGameState.currentPlayerIndex]
-    io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
-    
-    // Redémarrer le timer (appel récursif)
-    startTurnTimer(
-      roomId,
-      () => handleTimerExpiredAndRestart(io, roomId),
-      (timeLeft: number) => io.to(roomId).emit('turn_timer_update', timeLeft)
-    )
-  }
-}
+import { startTurnTimerWithCallbacks } from './timerUtils'
+import { updateFinishedGame } from './gameDbUtils'
 
 /**
  * Configure les gestionnaires d'événements pour le jeu
@@ -116,29 +80,8 @@ export function setupGameHandlers(
       io.to(roomId).emit('game_update', gameState)
 
       if (gameState.gameStatus === 'finished') {
-        // Formater les scores des joueurs pour les enregistrer
-        const playersScores = gameState.players.map((p) => ({
-          id: p.id,
-          name: p.name,
-          user_id: p.userId,
-          score: p.totalScore,
-          abandoned: p.abandoned,
-        }))
-
         // Mettre à jour la base de données
-        supabase
-          .from('games')
-          .update({
-            status: 'finished',
-            winner: gameState.winner,
-            players_scores: playersScores,
-          })
-          .eq('id', roomId)
-          .then(({ error }) => {
-            if (error) {
-              console.error('[GAME] Erreur mise à jour de la partie:', error)
-            }
-          })
+        updateFinishedGame(supabase, roomId, gameState)
 
         io.to(roomId).emit('game_ended', {
           winner: gameState.winner,
@@ -156,11 +99,7 @@ export function setupGameHandlers(
         io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
         
         // Démarrer le timer pour le nouveau tour
-        startTurnTimer(
-          roomId,
-          () => handleTimerExpiredAndRestart(io, roomId),
-          (timeLeft: number) => io.to(roomId).emit('turn_timer_update', timeLeft)
-        )
+        startTurnTimerWithCallbacks(io, roomId)
       }
     }
   })
@@ -225,29 +164,8 @@ export function setupGameHandlers(
       // Plus de joueurs, partie annulée
       roomStates.delete(roomId)
     } else if (updatedGame.gameStatus === 'finished') {
-      // Formater les scores des joueurs pour les enregistrer
-      const playersScores = updatedGame.players.map((p) => ({
-        id: p.id,
-        name: p.name,
-        user_id: p.userId,
-        score: p.totalScore,
-        abandoned: p.abandoned,
-      }))
-
       // Mettre à jour la base de données
-      supabase
-        .from('games')
-        .update({
-          status: 'finished',
-          winner: updatedGame.winner,
-          players_scores: playersScores,
-        })
-        .eq('id', roomId)
-        .then(({ error }) => {
-          if (error) {
-            console.error('[GAME] Erreur mise à jour de la partie:', error)
-          }
-        })
+      updateFinishedGame(supabase, roomId, updatedGame)
 
       io.to(roomId).emit('game_update', updatedGame)
       io.to(roomId).emit('game_ended', {
@@ -274,11 +192,7 @@ export function setupGameHandlers(
       // Redémarrer le timer uniquement si c'était le tour du joueur qui abandonne
       // (le timer a été nettoyé dans removePlayer dans ce cas)
       if (wasCurrentPlayer) {
-        startTurnTimer(
-          roomId,
-          () => handleTimerExpiredAndRestart(io, roomId),
-          (timeLeft: number) => io.to(roomId).emit('turn_timer_update', timeLeft)
-        )
+        startTurnTimerWithCallbacks(io, roomId)
       }
     }
   })
