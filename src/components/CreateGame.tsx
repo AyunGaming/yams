@@ -24,8 +24,12 @@ export default function CreateGame() {
       return router.push('/login')
     }
 
+    // Activer le loading IMMÉDIATEMENT
     setLoading(true)
     console.log('[CREATE] 3. Loading activé')
+    
+    // Petit délai pour garantir que React affiche le loading avant l'opération async
+    await new Promise(resolve => setTimeout(resolve, 50))
     
     const id = generateGameId()
     console.log('[CREATE] 4. ID généré:', id)
@@ -44,11 +48,10 @@ export default function CreateGame() {
 
       console.log('[CREATE] 6. Réponse Supabase:', { data, error })
 
-      setLoading(false)
-      console.log('[CREATE] 7. Loading désactivé')
-
       if (error) {
         console.error('[CREATE] ❌ Erreur:', error)
+        setLoading(false)
+        console.log('[CREATE] 7. Loading désactivé')
         alert(`Erreur lors de la création de la partie: ${error.message}`)
       } else {
         console.log('[CREATE] ✅ Partie créée! Redirection...')
@@ -56,6 +59,7 @@ export default function CreateGame() {
         // Petit délai pour laisser Supabase répliquer les données
         await new Promise(resolve => setTimeout(resolve, 200))
         router.push(`/game/${id}`)
+        // Le loading reste actif pendant la redirection
       }
     } catch (err) {
       console.error('[CREATE] ❌ Exception:', err)

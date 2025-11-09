@@ -62,6 +62,9 @@ export default function GameOverActions({
 
     isCreatingRematch.current = true
     setCreatingRematch(true)
+    
+    // Petit délai pour garantir que React affiche le loading
+    await new Promise(resolve => setTimeout(resolve, 50))
 
     try {
       // Créer une nouvelle partie dans Supabase

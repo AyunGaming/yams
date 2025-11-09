@@ -14,7 +14,12 @@ export default function JoinGame() {
       return
     }
 
+    // Activer le loading IMMÉDIATEMENT
     setLoading(true)
+    
+    // Petit délai pour garantir que React affiche le loading avant la redirection
+    await new Promise(resolve => setTimeout(resolve, 50))
+    
     // On redirige simplement vers la page de jeu
     // Le composant de la page vérifiera si la partie existe
     router.push(`/game/${gameId.trim()}`)
