@@ -64,7 +64,7 @@ export async function getUsernameFromId(userId: string): Promise<string> {
       return 'Joueur'
     }
     return data.username
-  } catch (error) {
+  } catch {
     return 'Joueur'
   }
 }
