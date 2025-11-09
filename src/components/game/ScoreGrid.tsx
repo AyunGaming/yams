@@ -44,11 +44,6 @@ export default function ScoreGrid({
   // Déterminer la prochaine catégorie à remplir (pour les variantes non-classiques)
   const nextCategory = variant !== 'classic' ? getNextCategory(variant, scoreSheet) : null
   
-  // Trouver le nom de la prochaine catégorie
-  const nextCategoryLabel = nextCategory 
-    ? (CATEGORIES.upper.find(c => c.key === nextCategory) || CATEGORIES.lower.find(c => c.key === nextCategory))?.label
-    : null
-  
   const upperScore = (scoreSheet.ones || 0) + 
                      (scoreSheet.twos || 0) + 
                      (scoreSheet.threes || 0) + 
@@ -87,14 +82,8 @@ export default function ScoreGrid({
             )}
           </div>
           
-          {/* Afficher quelle catégorie est à remplir dans les variantes non-classiques */}
-          {variant !== 'classic' && nextCategory && isMyTurn && canChoose && (
-            <div className="alert alert-info mb-4 py-2">
-              <span className="text-sm">
-                Prochaine catégorie : <strong>{nextCategoryLabel}</strong>
-              </span>
-            </div>
-          )}
+          {/* Note: L'alerte "Prochaine catégorie" n'est plus affichée ici car elle est 
+              maintenant dans ActiveCategoryCard au-dessus de la fiche */}
           
           {/* Section supérieure */}
           <div className="mb-4">
@@ -118,9 +107,10 @@ export default function ScoreGrid({
                   score={scoreSheet[cat.key]}
                   potentialScore={currentDice.length > 0 ? calculateScore(cat.key, currentDice) : null}
                   onChoose={() => onChooseScore(cat.key)}
-                  canChoose={canChoose && isMyTurn && scoreSheet[cat.key] === null && (variant === 'classic' || nextCategory === cat.key)}
+                  canChoose={variant === 'classic' && canChoose && isMyTurn && scoreSheet[cat.key] === null}
                   targetScore={cat.targetScore}
                   isNext={nextCategory === cat.key}
+                  variant={variant}
                 />
               ))}
             </div>
@@ -144,8 +134,9 @@ export default function ScoreGrid({
                   score={scoreSheet[cat.key]}
                   potentialScore={currentDice.length > 0 ? calculateScore(cat.key, currentDice) : null}
                   onChoose={() => onChooseScore(cat.key)}
-                  canChoose={canChoose && isMyTurn && scoreSheet[cat.key] === null && (variant === 'classic' || nextCategory === cat.key)}
+                  canChoose={variant === 'classic' && canChoose && isMyTurn && scoreSheet[cat.key] === null}
                   isNext={nextCategory === cat.key}
+                  variant={variant}
                 />
               ))}
             </div>
@@ -164,10 +155,14 @@ interface ScoreLineProps {
   canChoose: boolean
   targetScore?: number
   isNext?: boolean
+  variant?: GameVariant
 }
 
-function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targetScore, isNext = false }: ScoreLineProps) {
+function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targetScore, isNext = false, variant = 'classic' }: ScoreLineProps) {
   const isChosen = score !== null
+  
+  // En mode non-classique, toutes les lignes sont en lecture seule
+  const isReadOnly = variant !== 'classic'
   
   // Déterminer la couleur de fond si la ligne est remplie et qu'un target score existe
   let performanceColor = ''
@@ -179,9 +174,9 @@ function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targe
     }
   }
   
-  // Mettre en évidence la prochaine catégorie à remplir
-  if (isNext && !isChosen) {
-    performanceColor = 'bg-info/20 border-2 border-info ring-2 ring-info/30'
+  // Mettre en évidence la prochaine catégorie à remplir (uniquement en mode non-classique)
+  if (isNext && !isChosen && isReadOnly) {
+    performanceColor = 'bg-info/10 border-l-4 border-info' // Indication visuelle plus discrète
   }
   
   return (
@@ -191,12 +186,17 @@ function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targe
       className={`
         w-full p-2 rounded flex justify-between items-center
         transition-colors
-        ${performanceColor || (isChosen 
-          ? 'bg-base-300 cursor-default' 
-          : canChoose 
-            ? 'bg-base-100 hover:bg-primary/20 cursor-pointer border border-primary/50' 
-            : 'bg-base-100 cursor-not-allowed opacity-60'
-        )}
+        ${isReadOnly
+          ? performanceColor || (isChosen 
+            ? 'bg-base-300 cursor-default' 
+            : 'bg-base-300/50 cursor-default opacity-70') // Lecture seule
+          : performanceColor || (isChosen 
+            ? 'bg-base-300 cursor-default' 
+            : canChoose 
+              ? 'bg-base-100 hover:bg-primary/20 cursor-pointer border border-primary/50' 
+              : 'bg-base-100 cursor-not-allowed opacity-60'
+          )
+        }
       `}
     >
       <div className="text-left">

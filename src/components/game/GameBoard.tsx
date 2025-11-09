@@ -8,6 +8,10 @@ import { Socket } from 'socket.io-client'
 import { GameState, ScoreCategory } from '@/types/game'
 import Dice from './Dice'
 import PlayerScoreCards from './PlayerScoreCards'
+import ActiveCategoryCard from './ActiveCategoryCard'
+import { getNextCategory } from '@/lib/variantLogic'
+import { getCategoryLabel } from '@/lib/categoryLabels'
+import { calculateScore } from '@/lib/yamsLogic'
 
 interface GameBoardProps {
   uuid: string
@@ -39,6 +43,12 @@ export default function GameBoard({
 }: GameBoardProps) {
   const currentPlayer = gameState.players[gameState.currentPlayerIndex]
   const myTurn = currentPlayer.id === socket.id
+  
+  // Déterminer la prochaine catégorie si variante non-classique
+  const myPlayer = gameState.players.find(p => p.id === socket.id)
+  const nextCategory = gameState.variant !== 'classic' && myPlayer
+    ? getNextCategory(gameState.variant, myPlayer.scoreSheet)
+    : null
   
   // Références pour détecter les changements de tour
   const previousMyTurnRef = useRef<boolean | null>(null)
@@ -202,9 +212,13 @@ export default function GameBoard({
                   <p className="text-sm text-base-content/70">
                     💡 Cliquez sur les dés pour les verrouiller/déverrouiller
                   </p>
-                ) : (
+                ) : gameState.variant === 'classic' ? (
                   <p className="text-sm text-base-content/70">
                     💡 Choisissez une combinaison dans votre fiche de score
+                  </p>
+                ) : (
+                  <p className="text-sm text-base-content/70">
+                    💡 Validez votre score ci-dessous
                   </p>
                 )
               ) : (
@@ -215,6 +229,18 @@ export default function GameBoard({
             </div>
           </div>
         </div>
+
+        {/* Carte de catégorie active (variantes montante/descendante uniquement) */}
+        {myTurn && gameState.variant !== 'classic' && nextCategory && (
+          <ActiveCategoryCard
+            category={nextCategory}
+            categoryLabel={getCategoryLabel(nextCategory)}
+            categoryDescription=""
+            potentialScore={calculateScore(nextCategory, gameState.dice.map(d => d.value))}
+            onValidate={() => onChooseScore(nextCategory)}
+            canValidate={gameState.rollsLeft < 3}
+          />
+        )}
 
         {/* Messages système en haut des fiches */}
         {systemMessages.length > 0 && (() => {
