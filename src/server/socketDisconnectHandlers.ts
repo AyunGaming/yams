@@ -1,11 +1,36 @@
 /**
  * Gestionnaires d'événements Socket.IO pour la déconnexion
  * Gère disconnect et la notification aux autres joueurs
+ * Avec un délai de grâce de 60 secondes avant de considérer un abandon
  */
 
 import { Server, Socket } from 'socket.io'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { removePlayer } from './gameManager'
+
+// Délai de grâce en millisecondes (60 secondes)
+const DISCONNECT_GRACE_PERIOD = 60000
+
+// Map pour stocker les timers de déconnexion en attente
+// Key: roomId-userId, Value: NodeJS.Timeout
+const disconnectTimers = new Map<string, NodeJS.Timeout>()
+
+/**
+ * Annule un timer de déconnexion si il existe
+ */
+export function cancelDisconnectTimer(roomId: string, userId: string) {
+  const timerKey = `${roomId}-${userId}`
+  const existingTimer = disconnectTimers.get(timerKey)
+  
+  if (existingTimer) {
+    console.log(`[DISCONNECT] Annulation du timer pour ${userId} dans ${roomId}`)
+    clearTimeout(existingTimer)
+    disconnectTimers.delete(timerKey)
+    return true
+  }
+  
+  return false
+}
 
 /**
  * Configure les gestionnaires d'événements pour la déconnexion
@@ -35,68 +60,86 @@ export function setupDisconnectHandlers(
         console.log(`[DISCONNECT] Room ${roomId} - Partie commencée: ${isGameStarted}`)
 
         if (isGameStarted) {
-          // Partie en cours : marquer comme abandonné
-          console.log(`[DISCONNECT] ${playerName} a abandonné la partie ${roomId}`)
+          // Partie en cours : attendre 60 secondes avant de considérer comme abandonné
+          const userId = socket.data.userId
           
-          // Envoyer le message AVANT de modifier le game state
-          console.log(`[DISCONNECT] Envoi du message d'abandon à la room: ${roomId}`)
-          io.to(roomId).emit('system_message', `${playerName} a abandonné la partie`)
-          console.log(`[DISCONNECT] Message envoyé`)
-          
-          const updatedGame = removePlayer(roomId, socket.id)
-          
-          if (!updatedGame) {
-            // Plus de joueurs, partie annulée
-            console.log('[DISCONNECT] Plus aucun joueur dans la partie')
-            roomStates.delete(roomId)
-          } else if (updatedGame.gameStatus === 'finished') {
-            // Un seul joueur reste, il gagne
-            const playersScores = updatedGame.players.map((p) => ({
-              id: p.id,
-              name: p.name,
-              user_id: p.userId,
-              score: p.totalScore,
-              abandoned: p.abandoned,
-            }))
-
-            // Mettre à jour la base de données
-            supabase
-              .from('games')
-              .update({
-                status: 'finished',
-                winner: updatedGame.winner,
-                players_scores: playersScores,
-              })
-              .eq('id', roomId)
-              .then(({ error }) => {
-                if (error) {
-                  console.error('[DISCONNECT] Erreur mise à jour de la partie:', error)
-                }
-              })
-
-            io.to(roomId).emit('game_update', updatedGame)
-            io.to(roomId).emit('game_ended', {
-              winner: updatedGame.winner,
-              reason: 'abandon',
-              message: `${updatedGame.winner} remporte la partie par abandon !`,
-            })
-            roomStates.delete(roomId)
-            console.log(`[DISCONNECT] Partie ${roomId} terminée par abandon`)
-          } else {
-            // 2+ joueurs restent, continuer
-            // Compter les joueurs actifs (non-abandonnés)
-            const activePlayers = updatedGame.players.filter(p => !p.abandoned)
-            const activePlayersCount = activePlayers.length
+          if (userId) {
+            console.log(`[DISCONNECT] ${playerName} s'est déconnecté, délai de grâce de 60s`)
             
-            io.to(roomId).emit('game_update', updatedGame)
-            io.to(roomId).emit(
-              'system_message',
-              `La partie continue avec ${activePlayersCount} joueur${activePlayersCount > 1 ? 's' : ''}`
-            )
+            // Notifier les autres joueurs de la déconnexion temporaire
+            io.to(roomId).emit('system_message', `${playerName} s'est déconnecté (60s pour revenir)`)
             
-            const currentPlayer = updatedGame.players[updatedGame.currentPlayerIndex]
-            io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
-            console.log(`[DISCONNECT] Partie continue, tour de ${currentPlayer.name}`)
+            const timerKey = `${roomId}-${userId}`
+            
+            // Créer un timer pour l'abandon après 60 secondes
+            const abandonTimer = setTimeout(() => {
+              console.log(`[DISCONNECT] Timer expiré pour ${playerName} dans ${roomId}`)
+              
+              // Le joueur ne s'est pas reconnecté, marquer comme abandonné
+              io.to(roomId).emit('system_message', `${playerName} a abandonné la partie`)
+              
+              const updatedGame = removePlayer(roomId, socket.id)
+              
+              if (!updatedGame) {
+                // Plus de joueurs, partie annulée
+                console.log('[DISCONNECT] Plus aucun joueur dans la partie')
+                roomStates.delete(roomId)
+              } else if (updatedGame.gameStatus === 'finished') {
+                // Un seul joueur reste, il gagne
+                const playersScores = updatedGame.players.map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  user_id: p.userId,
+                  score: p.totalScore,
+                  abandoned: p.abandoned,
+                }))
+
+                // Mettre à jour la base de données
+                supabase
+                  .from('games')
+                  .update({
+                    status: 'finished',
+                    winner: updatedGame.winner,
+                    players_scores: playersScores,
+                  })
+                  .eq('id', roomId)
+                  .then(({ error }) => {
+                    if (error) {
+                      console.error('[DISCONNECT] Erreur mise à jour de la partie:', error)
+                    }
+                  })
+
+                io.to(roomId).emit('game_update', updatedGame)
+                io.to(roomId).emit('game_ended', {
+                  winner: updatedGame.winner,
+                  reason: 'abandon',
+                  message: `${updatedGame.winner} remporte la partie par abandon !`,
+                })
+                roomStates.delete(roomId)
+                console.log(`[DISCONNECT] Partie ${roomId} terminée par abandon`)
+              } else {
+                // 2+ joueurs restent, continuer
+                // Compter les joueurs actifs (non-abandonnés)
+                const activePlayers = updatedGame.players.filter(p => !p.abandoned)
+                const activePlayersCount = activePlayers.length
+                
+                io.to(roomId).emit('game_update', updatedGame)
+                io.to(roomId).emit(
+                  'system_message',
+                  `La partie continue avec ${activePlayersCount} joueur${activePlayersCount > 1 ? 's' : ''}`
+                )
+                
+                const currentPlayer = updatedGame.players[updatedGame.currentPlayerIndex]
+                io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
+                console.log(`[DISCONNECT] Partie continue, tour de ${currentPlayer.name}`)
+              }
+              
+              // Nettoyer le timer
+              disconnectTimers.delete(timerKey)
+            }, DISCONNECT_GRACE_PERIOD)
+            
+            // Stocker le timer
+            disconnectTimers.set(timerKey, abandonTimer)
           }
         } else {
           // Salle d'attente : simple notification

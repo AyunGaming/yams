@@ -6,6 +6,7 @@
 import { Server, Socket } from 'socket.io'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { initializeGame, getGameState, updatePlayerSocketId } from './gameManager'
+import { cancelDisconnectTimer } from './socketDisconnectHandlers'
 
 type Player = { id: string; name: string; userId?: string; avatar?: string }
 
@@ -157,6 +158,12 @@ export function setupRoomHandlers(
           const updated = updatePlayerSocketId(roomId, userId, socket.id)
           if (updated) {
             console.log(`[ROOM] Socket.id mis à jour pour ${playerName}`)
+          }
+          
+          // Annuler le timer de déconnexion si il existe
+          const timerCancelled = cancelDisconnectTimer(roomId, userId)
+          if (timerCancelled) {
+            console.log(`[ROOM] Timer de déconnexion annulé pour ${playerName}`)
           }
         }
         
