@@ -6,7 +6,7 @@
 
 import { Server, Socket } from 'socket.io'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { removePlayer } from './gameManager'
+import { removePlayer, getGameState } from './gameManager'
 
 // Délai de grâce en millisecondes (60 secondes)
 const DISCONNECT_GRACE_PERIOD = 60000
@@ -60,6 +60,16 @@ export function setupDisconnectHandlers(
         console.log(`[DISCONNECT] Room ${roomId} - Partie commencée: ${isGameStarted}`)
 
         if (isGameStarted) {
+          // Vérifier si la partie est déjà terminée
+          const gameState = getGameState(roomId)
+          const isGameFinished = gameState?.gameStatus === 'finished'
+          
+          if (isGameFinished) {
+            console.log(`[DISCONNECT] ${playerName} quitte une partie terminée, pas de timer`)
+            // Partie déjà terminée, pas besoin de timer d'abandon
+            return
+          }
+          
           // Partie en cours : attendre 60 secondes avant de considérer comme abandonné
           const userId = socket.data.userId
           
