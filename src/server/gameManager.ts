@@ -1,41 +1,23 @@
 // Gestionnaire de l'état des parties côté serveur
 
-import { GameState, Die, ScoreCategory, GameVariant, ScoreSheet } from '../types/game'
+import { GameState, ScoreCategory, GameVariant, ScoreSheet } from '../types/game'
 import { calculateScore, calculateTotalScore, createEmptyScoreSheet, createDevScoreSheet, isScoreSheetComplete } from '../lib/yamsLogic'
 import { canChooseCategory } from '../lib/variantLogic'
-
-// Stocker les états de jeu en mémoire
-const games = new Map<string, GameState>()
-
-// Stocker les timers actifs (timeouts et intervals)
-const turnTimers = new Map<string, { timeout: NodeJS.Timeout; interval: NodeJS.Timeout }>()
-
-// Durée du timer en secondes
-const TURN_DURATION = 90
+import { createDice, rollUnlockedDice } from './diceManager'
+import { getGameState, setGameState, deleteGameState, clearAllGames as clearAllGameStates } from './gameStateManager'
+import { startTurnTimer, clearTurnTimer, clearAllTimers } from './timerManager'
 
 /**
  * Nettoie tous les gestionnaires de jeu (utilisé au redémarrage du serveur)
  */
 export function clearAllGames(): void {
-  const count = games.size
-  
-  // Nettoyer tous les timers actifs
-  turnTimers.forEach(({ timeout, interval }) => {
-    clearTimeout(timeout)
-    clearInterval(interval)
-  })
-  turnTimers.clear()
-  
-  games.clear()
+  const count = clearAllGameStates()
+  clearAllTimers()
   console.log(`🧹 ${count} partie(s) supprimée(s) de la mémoire`)
 }
 
-/**
- * Récupère l'état d'une partie
- */
-export function getGameState(roomId: string): GameState | null {
-  return games.get(roomId) || null
-}
+// Ré-exporter pour compatibilité
+export { getGameState, startTurnTimer, clearTurnTimer }
 
 /**
  * Met à jour le socket.id d'un joueur (reconnexion)
@@ -44,7 +26,7 @@ export function getGameState(roomId: string): GameState | null {
  * @param newSocketId - Nouveau socket.id
  */
 export function updatePlayerSocketId(roomId: string, userId: string, newSocketId: string): boolean {
-  const game = games.get(roomId)
+  const game = getGameState(roomId)
   if (!game) return false
 
   const player = game.players.find(p => p.userId === userId)
@@ -91,32 +73,15 @@ export function initializeGame(
     console.log('🔧 Mode développement : Scores pré-remplis (sauf "chance") pour tests rapides')
   }
   
-  games.set(roomId, gameState)
+  setGameState(roomId, gameState)
   return gameState
-}
-
-/**
- * Crée 5 dés avec des valeurs aléatoires
- */
-function createDice(): Die[] {
-  return Array(5).fill(null).map(() => ({
-    value: rollSingleDie(),
-    locked: false,
-  }))
-}
-
-/**
- * Lance un dé (valeur entre 1 et 6)
- */
-function rollSingleDie(): number {
-  return Math.floor(Math.random() * 6) + 1
 }
 
 /**
  * Lance les dés (sauf ceux qui sont verrouillés)
  */
 export function rollDice(roomId: string): GameState | null {
-  const game = games.get(roomId)
+  const game = getGameState(roomId)
   if (!game) return null
   
   if (game.rollsLeft <= 0) {
@@ -124,11 +89,7 @@ export function rollDice(roomId: string): GameState | null {
   }
   
   // Lancer uniquement les dés non verrouillés
-  game.dice = game.dice.map(die => ({
-    ...die,
-    value: die.locked ? die.value : rollSingleDie(),
-  }))
-  
+  game.dice = rollUnlockedDice(game.dice)
   game.rollsLeft--
   
   return game
@@ -138,7 +99,7 @@ export function rollDice(roomId: string): GameState | null {
  * Verrouille/déverrouille un dé
  */
 export function toggleDieLock(roomId: string, dieIndex: number): GameState | null {
-  const game = games.get(roomId)
+  const game = getGameState(roomId)
   if (!game || dieIndex < 0 || dieIndex >= 5) return null
   
   game.dice[dieIndex].locked = !game.dice[dieIndex].locked
@@ -154,7 +115,7 @@ export function chooseScore(
   playerId: string, 
   category: ScoreCategory
 ): GameState | null {
-  const game = games.get(roomId)
+  const game = getGameState(roomId)
   if (!game) return null
   
   const currentPlayer = game.players[game.currentPlayerIndex]
@@ -216,7 +177,7 @@ export function chooseScore(
  * Marque un joueur comme ayant abandonné
  */
 export function removePlayer(roomId: string, playerId: string): GameState | null {
-  const game = games.get(roomId)
+  const game = getGameState(roomId)
   if (!game) return null
   
   const playerIndex = game.players.findIndex(p => p.id === playerId)
@@ -233,7 +194,7 @@ export function removePlayer(roomId: string, playerId: string): GameState | null
   if (activePlayers.length === 0) {
     // Plus personne, partie annulée
     clearTurnTimer(roomId)
-    games.delete(roomId)
+    deleteGameState(roomId)
     return null
   } else if (activePlayers.length === 1) {
     // Un seul joueur reste, il gagne
@@ -273,24 +234,24 @@ function getNextActivePlayerIndex(game: GameState): number {
 }
 
 /**
- * Récupère l'état d'une partie
+ * Alias pour getGameState (pour compatibilité)
  */
-export function getGame(roomId: string): GameState | undefined {
-  return games.get(roomId)
+export function getGame(roomId: string): GameState | null {
+  return getGameState(roomId)
 }
 
 /**
  * Supprime une partie
  */
 export function deleteGame(roomId: string): void {
-  games.delete(roomId)
+  deleteGameState(roomId)
 }
 
 /**
  * Réinitialise les dés pour un nouveau tour
  */
 export function resetDiceForNewTurn(roomId: string): GameState | null {
-  const game = games.get(roomId)
+  const game = getGameState(roomId)
   if (!game) return null
   
   game.dice = createDice()
@@ -331,68 +292,11 @@ function findBestAvailableCategory(diceValues: number[], scoreSheet: ScoreSheet,
 }
 
 /**
- * Nettoie les timers d'une partie
- */
-export function clearTurnTimer(roomId: string): void {
-  const timers = turnTimers.get(roomId)
-  if (timers) {
-    clearTimeout(timers.timeout)
-    clearInterval(timers.interval)
-    turnTimers.delete(roomId)
-  }
-}
-
-/**
- * Démarre le timer pour le tour d'un joueur
- * @param roomId - ID de la partie
- * @param onTimerExpired - Callback appelée quand le timer expire
- * @param onTimerUpdate - Callback appelée chaque seconde pour mettre à jour le temps restant
- */
-export function startTurnTimer(
-  roomId: string,
-  onTimerExpired: () => void,
-  onTimerUpdate: (timeLeft: number) => void
-): void {
-  // Nettoyer le timer précédent s'il existe
-  clearTurnTimer(roomId)
-  
-  const game = games.get(roomId)
-  if (!game) return
-  
-  // Initialiser le temps de début
-  game.turnStartTime = Date.now()
-  game.turnTimeLeft = TURN_DURATION
-  
-  // Mettre à jour chaque seconde
-  const interval = setInterval(() => {
-    const game = games.get(roomId)
-    if (!game) {
-      clearTurnTimer(roomId)
-      return
-    }
-    
-    const elapsed = Math.floor((Date.now() - (game.turnStartTime || 0)) / 1000)
-    const timeLeft = Math.max(0, TURN_DURATION - elapsed)
-    game.turnTimeLeft = timeLeft
-    
-    onTimerUpdate(timeLeft)
-  }, 1000)
-  
-  // Expirer après TURN_DURATION secondes
-  const timeout = setTimeout(() => {
-    clearTurnTimer(roomId)
-    onTimerExpired()
-  }, TURN_DURATION * 1000)
-  
-  turnTimers.set(roomId, { timeout, interval })
-}
-
-/**
  * Gère l'expiration du timer : choisit automatiquement le meilleur score
  * Retourne l'état du jeu mis à jour ainsi que la catégorie et le score choisis
  */
 export function handleTimerExpired(roomId: string): { gameState: GameState; category: ScoreCategory; score: number; playerName: string } | null {
-  const game = games.get(roomId)
+  const game = getGameState(roomId)
   if (!game) return null
   
   const currentPlayer = game.players[game.currentPlayerIndex]
