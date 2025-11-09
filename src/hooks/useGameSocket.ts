@@ -33,6 +33,7 @@ interface UseGameSocketReturn {
   systemMessages: string[]
   isConnecting: boolean
   roomJoined: boolean // Indique si le serveur a confirmé l'accès à la room
+  onDiceRolled: (() => void) | null // Callback appelé quand les dés sont lancés
 }
 
 /**
@@ -57,6 +58,7 @@ export function useGameSocket({
   const [gameEnded, setGameEnded] = useState(false)
   const [systemMessages, setSystemMessages] = useState<string[]>([])
   const [roomJoined, setRoomJoined] = useState(false)
+  const [diceRolledTrigger, setDiceRolledTrigger] = useState(0)
 
   useEffect(() => {
     // Attendre que l'authentification soit vérifiée
@@ -248,6 +250,11 @@ export function useGameSocket({
         setGameEnded(true)
       })
 
+      // Dés lancés (pour déclencher l'animation chez tous les joueurs)
+      newSocket.on('dice_rolled', () => {
+        setDiceRolledTrigger(prev => prev + 1)
+      })
+
       // Partie introuvable (pas d'alerte car déjà gérée côté client)
       newSocket.on('game_not_found', (data: { message: string }) => {
         logger.error('Partie introuvable:', data.message)
@@ -309,6 +316,7 @@ export function useGameSocket({
     systemMessages,
     isConnecting: isConnectingRef.current,
     roomJoined,
+    onDiceRolled: diceRolledTrigger > 0 ? () => setDiceRolledTrigger(0) : null,
   }
 }
 

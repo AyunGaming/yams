@@ -37,7 +37,7 @@ export default function GamePage() {
   const isRedirectingRef = useRef(false)
 
   // État du jeu via le hook personnalisé
-  const { socket, players, started, isHost, gameState, gameEnded, systemMessages, roomJoined } = useGameSocket(
+  const { socket, players, started, isHost, gameState, gameEnded, systemMessages, roomJoined, onDiceRolled } = useGameSocket(
     {
       uuid,
       user,
@@ -207,6 +207,15 @@ export default function GamePage() {
       return () => clearTimeout(timer)
     }
   }, [gameState, isRolling])
+
+  // Déclencher l'animation quand les dés sont lancés (événement socket)
+  useEffect(() => {
+    if (onDiceRolled) {
+      setIsRolling(true)
+      setRollCount(prev => prev + 1)
+      onDiceRolled() // Réinitialiser le trigger
+    }
+  }, [onDiceRolled])
 
   /**
    * Gestionnaires d'événements

@@ -25,6 +25,9 @@ export function setupGameHandlers(
   socket.on('roll_dice', (roomId: string) => {
     const gameState = rollDice(roomId)
     if (gameState) {
+      // Signaler à tous les joueurs qu'un lancer a eu lieu (pour l'animation)
+      io.to(roomId).emit('dice_rolled')
+      
       io.to(roomId).emit('game_update', gameState)
     }
   })

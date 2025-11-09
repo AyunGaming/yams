@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 
 interface DiceProps {
   dice: Die[]
-  onToggleLock: (index: number) => void
+  onToggleLock?: (index: number) => void
   canRoll: boolean
   isRolling?: boolean
   rollCount?: number
@@ -20,7 +20,7 @@ export default function Dice({ dice, onToggleLock, canRoll, isRolling = false, r
           die={die}
           index={index}
           onToggleLock={onToggleLock}
-          canInteract={canRoll}
+          canInteract={canRoll && !!onToggleLock}
           isRolling={isRolling && !die.locked}
         />
       ))}
@@ -31,7 +31,7 @@ export default function Dice({ dice, onToggleLock, canRoll, isRolling = false, r
 interface DieComponentProps {
   die: Die
   index: number
-  onToggleLock: (index: number) => void
+  onToggleLock?: (index: number) => void
   canInteract: boolean
   isRolling: boolean
 }
@@ -49,7 +49,7 @@ function DieComponent({ die, index, onToggleLock, canInteract, isRolling }: DieC
 
   return (
     <button
-      onClick={() => canInteract && onToggleLock(index)}
+      onClick={() => canInteract && onToggleLock?.(index)}
       disabled={!canInteract}
       className={`
         relative w-20 h-20 rounded-xl font-bold text-4xl

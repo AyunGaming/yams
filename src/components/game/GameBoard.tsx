@@ -136,31 +136,37 @@ export default function GameBoard({
 
       {/* Contenu principal */}
       <div className="flex-1 container mx-auto p-4 space-y-6">
-        {/* Dés et actions (visible seulement pendant mon tour) */}
-        {myTurn && (
-          <div className="card bg-gradient-to-br from-primary/10 to-secondary/10 shadow-xl max-w-3xl mx-auto">
-            <div className="card-body items-center">
-              {/* En-tête de la carte */}
-              <div className="flex items-center justify-between w-full mb-4">
-                <h3 className="card-title">🎲 Vos dés</h3>
-                <div className="badge badge-lg badge-primary gap-2">
-                  <span className="font-bold">{gameState.rollsLeft}</span>
-                  <span className="text-xs">
-                    lancer{gameState.rollsLeft > 1 ? 's' : ''} restant{gameState.rollsLeft > 1 ? 's' : ''}
-                  </span>
-                </div>
+        {/* Dés du joueur actif (visible par tous) */}
+        <div className={`card shadow-xl max-w-3xl mx-auto ${
+          myTurn 
+            ? 'bg-gradient-to-br from-primary/10 to-secondary/10' 
+            : 'bg-base-200/50'
+        }`}>
+          <div className="card-body items-center">
+            {/* En-tête de la carte */}
+            <div className="flex items-center justify-between w-full mb-4">
+              <h3 className="card-title">
+                {myTurn ? '🎲 Vos dés' : `🎲 Dés de ${currentPlayer.name}`}
+              </h3>
+              <div className="badge badge-lg badge-primary gap-2">
+                <span className="font-bold">{gameState.rollsLeft}</span>
+                <span className="text-xs">
+                  lancer{gameState.rollsLeft > 1 ? 's' : ''} restant{gameState.rollsLeft > 1 ? 's' : ''}
+                </span>
               </div>
+            </div>
 
-              {/* Dés */}
-              <Dice
-                dice={gameState.dice}
-                onToggleLock={onToggleDieLock}
-                canRoll={gameState.rollsLeft < 3 && gameState.rollsLeft > 0}
-                isRolling={isRolling}
-                rollCount={rollCount}
-              />
+            {/* Dés */}
+            <Dice
+              dice={gameState.dice}
+              onToggleLock={myTurn ? onToggleDieLock : undefined}
+              canRoll={myTurn && gameState.rollsLeft < 3 && gameState.rollsLeft > 0}
+              isRolling={isRolling}
+              rollCount={rollCount}
+            />
 
-              {/* Bouton lancer */}
+            {/* Bouton lancer (visible seulement si c'est mon tour) */}
+            {myTurn && (
               <button
                 onClick={onRollDice}
                 disabled={gameState.rollsLeft === 0 || isRolling}
@@ -183,10 +189,12 @@ export default function GameBoard({
                   </>
                 )}
               </button>
+            )}
 
-              {/* Indications */}
-              <div className="text-center mt-3">
-                {gameState.rollsLeft === 3 ? (
+            {/* Indications */}
+            <div className="text-center mt-3">
+              {myTurn ? (
+                gameState.rollsLeft === 3 ? (
                   <p className="text-sm text-base-content/70">
                     💡 Lancez les dés pour commencer votre tour
                   </p>
@@ -198,11 +206,15 @@ export default function GameBoard({
                   <p className="text-sm text-base-content/70">
                     💡 Choisissez une combinaison dans votre fiche de score
                   </p>
-                )}
-              </div>
+                )
+              ) : (
+                <p className="text-sm text-base-content/60 italic">
+                  ⏳ En attente de {currentPlayer.name}...
+                </p>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         {/* Messages système en haut des fiches */}
         {systemMessages.length > 0 && (() => {
