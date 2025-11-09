@@ -222,10 +222,16 @@ export default function GameBoard({
                         msg.includes('reconnecté') ||
                         msg.includes('abandonné')
                       
+                      // Calculer l'opacité en fonction de l'index (plus récent = plus opaque)
+                      // idx 0 = 100%, idx 1 = 70%, idx 2 = 50%, idx 3 = 30%
+                      const opacityClass = idx === 0 ? 'opacity-100' : 
+                                          idx === 1 ? 'opacity-70' : 
+                                          idx === 2 ? 'opacity-50' : 'opacity-30'
+                      
                       return (
                         <p 
                           key={idx} 
-                          className={`text-xs py-1 border-b border-base-content/10 first:border-t-0 ${
+                          className={`text-xs py-1 border-b border-base-content/10 first:border-t-0 transition-opacity duration-300 ${opacityClass} ${
                             isConnectionMessage 
                               ? 'text-base-content/40 italic' 
                               : 'text-base-content/80'

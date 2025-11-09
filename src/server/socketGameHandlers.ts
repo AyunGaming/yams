@@ -8,6 +8,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { rollDice, toggleDieLock, chooseScore, removePlayer, getGame } from './gameManager'
 import { ScoreCategory } from '../types/game'
 import { updateUserStats, countYamsInScoreSheet } from '../lib/userStats'
+import { getCategoryLabel } from '../lib/categoryLabels'
 
 /**
  * Configure les gestionnaires d'événements pour le jeu
@@ -46,9 +47,31 @@ export function setupGameHandlers(
    */
   socket.on('choose_score', ({ roomId, category }: { roomId: string; category: ScoreCategory }) => {
     const playerId = socket.id
+    
+    // Capturer l'état AVANT pour détecter le changement de tour
+    const gameBeforeChoice = getGame(roomId)
+    if (!gameBeforeChoice) return
+    
+    const oldTurnNumber = gameBeforeChoice.turnNumber
+    const playerBefore = gameBeforeChoice.players.find(p => p.id === playerId)
+    if (!playerBefore) return
+    
     const gameState = chooseScore(roomId, playerId, category)
 
     if (gameState) {
+      // Récupérer le joueur APRÈS l'appel à chooseScore pour avoir le score calculé
+      const playerAfter = gameState.players.find(p => p.id === playerId)
+      if (!playerAfter) return
+      
+      const scoreObtained = playerAfter.scoreSheet[category]
+      const categoryLabel = getCategoryLabel(category)
+      
+      // Message : score du joueur
+      if (scoreObtained !== null && scoreObtained !== undefined) {
+        io.to(roomId).emit('system_message', 
+          `${playerAfter.name} a marqué ${scoreObtained} point${scoreObtained > 1 ? 's' : ''} en ${categoryLabel}`)
+      }
+      
       io.to(roomId).emit('game_update', gameState)
 
       if (gameState.gameStatus === 'finished') {
@@ -82,6 +105,12 @@ export function setupGameHandlers(
           message: `${gameState.winner} remporte la partie !`,
         })
       } else {
+        // Vérifier si on a changé de tour
+        const newTurnNumber = gameState.turnNumber
+        if (newTurnNumber > oldTurnNumber) {
+          io.to(roomId).emit('system_message', `🎯 Début du tour ${newTurnNumber}`)
+        }
+        
         const currentPlayer = gameState.players[gameState.currentPlayerIndex]
         io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
       }

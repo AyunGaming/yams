@@ -203,6 +203,13 @@ export function setupRoomHandlers(
 
     // Émettre l'événement de démarrage
     io.to(roomId).emit('game_started', gameState)
+    
+    // Annoncer le début du premier tour
+    io.to(roomId).emit('system_message', '🎯 Début du tour 1')
+    
+    // Annoncer quel joueur commence
+    const firstPlayer = gameState.players[0]
+    io.to(roomId).emit('system_message', `C'est au tour de ${firstPlayer.name}`)
   })
 
   /**
