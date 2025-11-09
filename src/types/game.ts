@@ -50,6 +50,8 @@ export interface GameState {
   gameStatus: 'waiting' | 'playing' | 'finished' | 'server_interrupted'
   winner: string | null
   variant: GameVariant // Type de partie : classique, montante ou descendante
+  turnTimeLeft?: number // Temps restant pour le tour actuel en secondes
+  turnStartTime?: number // Timestamp de début du tour
 }
 
 export interface RollDiceAction {

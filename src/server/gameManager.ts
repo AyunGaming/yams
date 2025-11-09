@@ -1,17 +1,31 @@
 // Gestionnaire de l'état des parties côté serveur
 
-import { GameState, Die, ScoreCategory, GameVariant } from '../types/game'
+import { GameState, Die, ScoreCategory, GameVariant, ScoreSheet } from '../types/game'
 import { calculateScore, calculateTotalScore, createEmptyScoreSheet, createDevScoreSheet, isScoreSheetComplete } from '../lib/yamsLogic'
 import { canChooseCategory } from '../lib/variantLogic'
 
 // Stocker les états de jeu en mémoire
 const games = new Map<string, GameState>()
 
+// Stocker les timers actifs (timeouts et intervals)
+const turnTimers = new Map<string, { timeout: NodeJS.Timeout; interval: NodeJS.Timeout }>()
+
+// Durée du timer en secondes
+const TURN_DURATION = 90
+
 /**
  * Nettoie tous les gestionnaires de jeu (utilisé au redémarrage du serveur)
  */
 export function clearAllGames(): void {
   const count = games.size
+  
+  // Nettoyer tous les timers actifs
+  turnTimers.forEach(({ timeout, interval }) => {
+    clearTimeout(timeout)
+    clearInterval(interval)
+  })
+  turnTimers.clear()
+  
   games.clear()
   console.log(`🧹 ${count} partie(s) supprimée(s) de la mémoire`)
 }
@@ -159,6 +173,9 @@ export function chooseScore(
     return game
   }
   
+  // Nettoyer le timer du tour actuel
+  clearTurnTimer(roomId)
+  
   // Calculer et enregistrer le score
   const diceValues = game.dice.map(d => d.value)
   const score = calculateScore(category, diceValues)
@@ -215,10 +232,12 @@ export function removePlayer(roomId: string, playerId: string): GameState | null
   
   if (activePlayers.length === 0) {
     // Plus personne, partie annulée
+    clearTurnTimer(roomId)
     games.delete(roomId)
     return null
   } else if (activePlayers.length === 1) {
     // Un seul joueur reste, il gagne
+    clearTurnTimer(roomId)
     game.gameStatus = 'finished'
     game.winner = activePlayers[0].name
     return game
@@ -226,6 +245,7 @@ export function removePlayer(roomId: string, playerId: string): GameState | null
     // 2+ joueurs restent, passer au prochain joueur actif
     if (playerIndex === game.currentPlayerIndex) {
       // Si c'était le tour du joueur qui abandonne, passer au suivant
+      clearTurnTimer(roomId)
       game.currentPlayerIndex = getNextActivePlayerIndex(game)
       // Réinitialiser les dés pour le prochain joueur
       game.dice = createDice()
@@ -277,4 +297,145 @@ export function resetDiceForNewTurn(roomId: string): GameState | null {
   game.rollsLeft = 3
   
   return game
+}
+
+/**
+ * Trouve la meilleure catégorie disponible pour les dés actuels
+ */
+function findBestAvailableCategory(diceValues: number[], scoreSheet: ScoreSheet, variant: GameVariant): ScoreCategory | null {
+  const categories: ScoreCategory[] = [
+    'ones', 'twos', 'threes', 'fours', 'fives', 'sixes',
+    'threeOfKind', 'fourOfKind', 'fullHouse', 
+    'smallStraight', 'largeStraight', 'yams', 'chance'
+  ]
+  
+  let bestCategory: ScoreCategory | null = null
+  let bestScore = -1
+  
+  for (const category of categories) {
+    // Vérifier si la catégorie est disponible
+    if (scoreSheet[category] !== null) continue
+    
+    // Vérifier si la catégorie peut être choisie selon la variante
+    if (!canChooseCategory(variant, category, scoreSheet)) continue
+    
+    const score = calculateScore(category, diceValues)
+    
+    if (score > bestScore) {
+      bestScore = score
+      bestCategory = category
+    }
+  }
+  
+  return bestCategory
+}
+
+/**
+ * Nettoie les timers d'une partie
+ */
+export function clearTurnTimer(roomId: string): void {
+  const timers = turnTimers.get(roomId)
+  if (timers) {
+    clearTimeout(timers.timeout)
+    clearInterval(timers.interval)
+    turnTimers.delete(roomId)
+  }
+}
+
+/**
+ * Démarre le timer pour le tour d'un joueur
+ * @param roomId - ID de la partie
+ * @param onTimerExpired - Callback appelée quand le timer expire
+ * @param onTimerUpdate - Callback appelée chaque seconde pour mettre à jour le temps restant
+ */
+export function startTurnTimer(
+  roomId: string,
+  onTimerExpired: () => void,
+  onTimerUpdate: (timeLeft: number) => void
+): void {
+  // Nettoyer le timer précédent s'il existe
+  clearTurnTimer(roomId)
+  
+  const game = games.get(roomId)
+  if (!game) return
+  
+  // Initialiser le temps de début
+  game.turnStartTime = Date.now()
+  game.turnTimeLeft = TURN_DURATION
+  
+  // Mettre à jour chaque seconde
+  const interval = setInterval(() => {
+    const game = games.get(roomId)
+    if (!game) {
+      clearTurnTimer(roomId)
+      return
+    }
+    
+    const elapsed = Math.floor((Date.now() - (game.turnStartTime || 0)) / 1000)
+    const timeLeft = Math.max(0, TURN_DURATION - elapsed)
+    game.turnTimeLeft = timeLeft
+    
+    onTimerUpdate(timeLeft)
+  }, 1000)
+  
+  // Expirer après TURN_DURATION secondes
+  const timeout = setTimeout(() => {
+    clearTurnTimer(roomId)
+    onTimerExpired()
+  }, TURN_DURATION * 1000)
+  
+  turnTimers.set(roomId, { timeout, interval })
+}
+
+/**
+ * Gère l'expiration du timer : choisit automatiquement le meilleur score
+ * Retourne l'état du jeu mis à jour ainsi que la catégorie et le score choisis
+ */
+export function handleTimerExpired(roomId: string): { gameState: GameState; category: ScoreCategory; score: number; playerName: string } | null {
+  const game = games.get(roomId)
+  if (!game) return null
+  
+  const currentPlayer = game.players[game.currentPlayerIndex]
+  const playerName = currentPlayer.name
+  
+  // Si aucun lancer n'a été fait, simuler un lancer
+  if (game.rollsLeft === 3) {
+    console.log(`[TIMER] ${currentPlayer.name} - Aucun lancer effectué, simulation...`)
+    game.dice = createDice()
+    game.rollsLeft = 2
+  }
+  
+  // Trouver le meilleur score possible
+  const diceValues = game.dice.map(d => d.value)
+  const bestCategory = findBestAvailableCategory(diceValues, currentPlayer.scoreSheet, game.variant)
+  
+  if (!bestCategory) {
+    console.log(`[TIMER] ${currentPlayer.name} - Aucune catégorie disponible`)
+    return null
+  }
+  
+  // Calculer le score avant de le choisir
+  const scoreValue = calculateScore(bestCategory, diceValues)
+  
+  console.log(`[TIMER] ${currentPlayer.name} - Choix automatique: ${bestCategory} (${scoreValue} points)`)
+  
+  // Choisir automatiquement le meilleur score
+  const updatedGameState = chooseScore(roomId, currentPlayer.id, bestCategory)
+  
+  if (!updatedGameState) return null
+  
+  return {
+    gameState: updatedGameState,
+    category: bestCategory,
+    score: scoreValue,
+    playerName
+  }
+}
+
+/**
+ * Supprime une partie et nettoie ses timers
+ */
+export function deleteGameAndTimers(roomId: string): void {
+  clearTurnTimer(roomId)
+  deleteGame(roomId)
 }

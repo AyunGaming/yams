@@ -5,10 +5,49 @@
 
 import { Server, Socket } from 'socket.io'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { initializeGame, getGameState, updatePlayerSocketId } from './gameManager'
+import { initializeGame, getGameState, updatePlayerSocketId, startTurnTimer, handleTimerExpired } from './gameManager'
 import { cancelDisconnectTimer } from './socketDisconnectHandlers'
+import { getCategoryLabel } from '../lib/categoryLabels'
 
 type Player = { id: string; name: string; userId?: string; avatar?: string }
+
+/**
+ * Fonction helper pour gérer l'expiration du timer et redémarrer le timer suivant
+ */
+function handleTimerExpiredAndRestart(io: Server, roomId: string) {
+  const result = handleTimerExpired(roomId)
+  if (!result) return
+  
+  const { gameState: updatedGameState, category, score, playerName } = result
+  
+  // Message de score avec (afk)
+  const categoryLabel = getCategoryLabel(category)
+  const message = `${playerName} a marqué ${score} point${score > 1 ? 's' : ''} en ${categoryLabel} (afk)`
+  console.log('[TIMER] Émission du message système:', message)
+  io.to(roomId).emit('system_message', message)
+  
+  io.to(roomId).emit('game_update', updatedGameState)
+  
+  // Si la partie est terminée
+  if (updatedGameState.gameStatus === 'finished') {
+    io.to(roomId).emit('game_ended', {
+      winner: updatedGameState.winner,
+      reason: 'completed',
+      message: `${updatedGameState.winner} remporte la partie !`,
+    })
+  } else {
+    // Redémarrer le timer pour le joueur suivant
+    const currentPlayer = updatedGameState.players[updatedGameState.currentPlayerIndex]
+    io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
+    
+    // Redémarrer le timer (appel récursif)
+    startTurnTimer(
+      roomId,
+      () => handleTimerExpiredAndRestart(io, roomId),
+      (timeLeft: number) => io.to(roomId).emit('turn_timer_update', timeLeft)
+    )
+  }
+}
 
 /**
  * Récupère les joueurs dans une room
@@ -255,6 +294,13 @@ export function setupRoomHandlers(
     // Annoncer quel joueur commence
     const firstPlayer = gameState.players[0]
     io.to(roomId).emit('system_message', `C'est au tour de ${firstPlayer.name}`)
+    
+    // Démarrer le timer pour le premier tour
+    startTurnTimer(
+      roomId,
+      () => handleTimerExpiredAndRestart(io, roomId),
+      (timeLeft: number) => io.to(roomId).emit('turn_timer_update', timeLeft)
+    )
   })
 
   /**

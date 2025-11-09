@@ -34,6 +34,7 @@ interface UseGameSocketReturn {
   isConnecting: boolean
   roomJoined: boolean // Indique si le serveur a confirmé l'accès à la room
   onDiceRolled: (() => void) | null // Callback appelé quand les dés sont lancés
+  turnTimeLeft: number | null // Temps restant pour le tour actuel en secondes
 }
 
 /**
@@ -59,6 +60,7 @@ export function useGameSocket({
   const [systemMessages, setSystemMessages] = useState<string[]>([])
   const [roomJoined, setRoomJoined] = useState(false)
   const [diceRolledTrigger, setDiceRolledTrigger] = useState(0)
+  const [turnTimeLeft, setTurnTimeLeft] = useState<number | null>(null)
 
   useEffect(() => {
     // Attendre que l'authentification soit vérifiée
@@ -242,6 +244,7 @@ export function useGameSocket({
 
       // Message système
       newSocket.on('system_message', (message: string) => {
+        console.log('[CLIENT] Message système reçu:', message)
         setSystemMessages((prev) => [...prev, message])
       })
 
@@ -260,6 +263,11 @@ export function useGameSocket({
       // Dés lancés (pour déclencher l'animation chez tous les joueurs)
       newSocket.on('dice_rolled', () => {
         setDiceRolledTrigger(prev => prev + 1)
+      })
+
+      // Mise à jour du timer du tour
+      newSocket.on('turn_timer_update', (timeLeft: number) => {
+        setTurnTimeLeft(timeLeft)
       })
 
       // Partie introuvable (pas d'alerte car déjà gérée côté client)
@@ -324,6 +332,7 @@ export function useGameSocket({
     isConnecting: isConnectingRef.current,
     roomJoined,
     onDiceRolled: diceRolledTrigger > 0 ? () => setDiceRolledTrigger(0) : null,
+    turnTimeLeft,
   }
 }
 

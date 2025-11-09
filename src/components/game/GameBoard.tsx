@@ -20,6 +20,7 @@ interface GameBoardProps {
   systemMessages: string[]
   isRolling: boolean
   rollCount: number
+  turnTimeLeft: number | null
   onRollDice: () => void
   onToggleDieLock: (dieIndex: number) => void
   onChooseScore: (category: ScoreCategory) => void
@@ -36,6 +37,7 @@ export default function GameBoard({
   systemMessages,
   isRolling,
   rollCount,
+  turnTimeLeft,
   onRollDice,
   onToggleDieLock,
   onChooseScore,
@@ -49,6 +51,20 @@ export default function GameBoard({
   const nextCategory = gameState.variant !== 'classic' && myPlayer
     ? getNextCategory(gameState.variant, myPlayer.scoreSheet)
     : null
+  
+  // Formater le temps restant en MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+  
+  // Déterminer la couleur du timer en fonction du temps restant
+  const getTimerColor = (seconds: number): string => {
+    if (seconds > 30) return 'badge-success'
+    if (seconds > 10) return 'badge-warning'
+    return 'badge-error'
+  }
   
   // Références pour détecter les changements de tour
   const previousMyTurnRef = useRef<boolean | null>(null)
@@ -114,6 +130,14 @@ export default function GameBoard({
                 </>
               )}
             </div>
+
+            {/* Timer du tour */}
+            {turnTimeLeft !== null && (
+              <div className={`badge ${getTimerColor(turnTimeLeft)} badge-lg gap-2 font-mono font-bold`}>
+                <span>⏱️</span>
+                <span>{formatTime(turnTimeLeft)}</span>
+              </div>
+            )}
 
             {/* Bouton abandonner */}
             <button 

@@ -37,7 +37,7 @@ export default function GamePage() {
   const isRedirectingRef = useRef(false)
 
   // État du jeu via le hook personnalisé
-  const { socket, players, started, isHost, gameState, gameEnded, systemMessages, roomJoined, onDiceRolled } = useGameSocket(
+  const { socket, players, started, isHost, gameState, gameEnded, systemMessages, roomJoined, onDiceRolled, turnTimeLeft } = useGameSocket(
     {
       uuid,
       user,
@@ -300,6 +300,7 @@ export default function GamePage() {
       systemMessages={systemMessages}
       isRolling={isRolling}
       rollCount={rollCount}
+      turnTimeLeft={turnTimeLeft}
       onRollDice={onRollDice}
       onToggleDieLock={onToggleDieLock}
       onChooseScore={onChooseScore}

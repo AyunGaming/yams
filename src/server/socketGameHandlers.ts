@@ -5,10 +5,48 @@
 
 import { Server, Socket } from 'socket.io'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { rollDice, toggleDieLock, chooseScore, removePlayer, getGame } from './gameManager'
+import { rollDice, toggleDieLock, chooseScore, removePlayer, getGame, startTurnTimer, handleTimerExpired } from './gameManager'
 import { ScoreCategory } from '../types/game'
 import { updateUserStats, countYamsInScoreSheet } from '../lib/userStats'
 import { getCategoryLabel } from '../lib/categoryLabels'
+
+/**
+ * Fonction helper pour gérer l'expiration du timer et redémarrer le timer suivant
+ */
+function handleTimerExpiredAndRestart(io: Server, roomId: string) {
+  const result = handleTimerExpired(roomId)
+  if (!result) return
+  
+  const { gameState: updatedGameState, category, score, playerName } = result
+  
+  // Message de score avec (afk)
+  const categoryLabel = getCategoryLabel(category)
+  const message = `${playerName} a marqué ${score} point${score > 1 ? 's' : ''} en ${categoryLabel} (afk)`
+  console.log('[TIMER] Émission du message système:', message)
+  io.to(roomId).emit('system_message', message)
+  
+  io.to(roomId).emit('game_update', updatedGameState)
+  
+  // Si la partie est terminée
+  if (updatedGameState.gameStatus === 'finished') {
+    io.to(roomId).emit('game_ended', {
+      winner: updatedGameState.winner,
+      reason: 'completed',
+      message: `${updatedGameState.winner} remporte la partie !`,
+    })
+  } else {
+    // Redémarrer le timer pour le joueur suivant
+    const currentPlayer = updatedGameState.players[updatedGameState.currentPlayerIndex]
+    io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
+    
+    // Redémarrer le timer (appel récursif)
+    startTurnTimer(
+      roomId,
+      () => handleTimerExpiredAndRestart(io, roomId),
+      (timeLeft: number) => io.to(roomId).emit('turn_timer_update', timeLeft)
+    )
+  }
+}
 
 /**
  * Configure les gestionnaires d'événements pour le jeu
@@ -116,6 +154,13 @@ export function setupGameHandlers(
         
         const currentPlayer = gameState.players[gameState.currentPlayerIndex]
         io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
+        
+        // Démarrer le timer pour le nouveau tour
+        startTurnTimer(
+          roomId,
+          () => handleTimerExpiredAndRestart(io, roomId),
+          (timeLeft: number) => io.to(roomId).emit('turn_timer_update', timeLeft)
+        )
       }
     }
   })
@@ -137,12 +182,19 @@ export function setupGameHandlers(
 
     // Récupérer le gameState AVANT de retirer le joueur pour sauvegarder ses stats
     const gameBeforeRemoval = getGame(roomId)
+    
+    // Vérifier si c'était le tour du joueur qui abandonne
+    let wasCurrentPlayer = false
 
     if (gameBeforeRemoval && userId) {
       // Trouver le joueur qui abandonne
       const abandoningPlayer = gameBeforeRemoval.players.find((p) => p.id === socket.id)
-
+      
+      // Vérifier si c'était son tour
       if (abandoningPlayer) {
+        const playerIndex = gameBeforeRemoval.players.findIndex((p) => p.id === socket.id)
+        wasCurrentPlayer = (playerIndex === gameBeforeRemoval.currentPlayerIndex)
+        
         // Compter les Yams réalisés
         const yamsCount = countYamsInScoreSheet(abandoningPlayer.scoreSheet)
 
@@ -218,6 +270,16 @@ export function setupGameHandlers(
 
       const currentPlayer = updatedGame.players[updatedGame.currentPlayerIndex]
       io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
+      
+      // Redémarrer le timer uniquement si c'était le tour du joueur qui abandonne
+      // (le timer a été nettoyé dans removePlayer dans ce cas)
+      if (wasCurrentPlayer) {
+        startTurnTimer(
+          roomId,
+          () => handleTimerExpiredAndRestart(io, roomId),
+          (timeLeft: number) => io.to(roomId).emit('turn_timer_update', timeLeft)
+        )
+      }
     }
   })
 
