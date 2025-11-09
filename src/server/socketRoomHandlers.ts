@@ -5,7 +5,7 @@
 
 import { Server, Socket } from 'socket.io'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { initializeGame, getGameState } from './gameManager'
+import { initializeGame, getGameState, updatePlayerSocketId } from './gameManager'
 
 type Player = { id: string; name: string; userId?: string; avatar?: string }
 
@@ -79,11 +79,38 @@ export function setupRoomHandlers(
     const players = getPlayersInRoom(io, roomId)
 
     if (isGameStarted) {
-      // La partie est en cours : envoyer l'état du jeu au joueur qui se reconnecte
+      // La partie est en cours : gérer la reconnexion
       const gameState = getGameState(roomId)
       if (gameState) {
         console.log(`[ROOM] ${playerName} se reconnecte à une partie en cours`)
-        socket.emit('game_started', gameState)
+        
+        // Mettre à jour le socket.id du joueur dans le gameState
+        if (userId) {
+          const updated = updatePlayerSocketId(roomId, userId, socket.id)
+          if (updated) {
+            console.log(`[ROOM] Socket.id mis à jour pour ${playerName}`)
+          }
+        }
+        
+        // Récupérer l'état mis à jour
+        const updatedGameState = getGameState(roomId)
+        if (updatedGameState) {
+          // Envoyer l'état actuel au joueur qui se reconnecte
+          socket.emit('game_started', updatedGameState)
+          
+          // Envoyer l'état mis à jour à TOUS les joueurs (pour sync les socket.id)
+          io.to(roomId).emit('game_update', updatedGameState)
+          
+          // Notifier les autres joueurs de la reconnexion
+          socket.to(roomId).emit('system_message', `${playerName} s'est reconnecté`)
+          
+          // Si c'est le tour du joueur qui se reconnecte, le notifier
+          const currentPlayer = updatedGameState.players[updatedGameState.currentPlayerIndex]
+          if (currentPlayer.userId === userId) {
+            console.log(`[ROOM] C'est le tour de ${playerName} (reconnecté)`)
+            io.to(roomId).emit('system_message', `C'est au tour de ${playerName}`)
+          }
+        }
       }
     } else {
       // La partie n'a pas démarré : envoyer la room_update

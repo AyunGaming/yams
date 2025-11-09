@@ -24,6 +24,26 @@ export function getGameState(roomId: string): GameState | null {
 }
 
 /**
+ * Met à jour le socket.id d'un joueur (reconnexion)
+ * @param roomId - ID de la partie
+ * @param userId - UUID de l'utilisateur
+ * @param newSocketId - Nouveau socket.id
+ */
+export function updatePlayerSocketId(roomId: string, userId: string, newSocketId: string): boolean {
+  const game = games.get(roomId)
+  if (!game) return false
+
+  const player = game.players.find(p => p.userId === userId)
+  if (!player) return false
+
+  const oldSocketId = player.id
+  player.id = newSocketId
+  
+  console.log(`[GAME] Mise à jour socket.id pour ${player.name}: ${oldSocketId} → ${newSocketId}`)
+  return true
+}
+
+/**
  * Initialise une nouvelle partie
  */
 export function initializeGame(
