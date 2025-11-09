@@ -1,7 +1,7 @@
 // Gestionnaire de l'état des parties côté serveur
 
 import { GameState, Die, ScoreCategory, GameVariant } from '../types/game'
-import { calculateScore, calculateTotalScore, createEmptyScoreSheet, isScoreSheetComplete } from '../lib/yamsLogic'
+import { calculateScore, calculateTotalScore, createEmptyScoreSheet, createDevScoreSheet, isScoreSheetComplete } from '../lib/yamsLogic'
 import { canChooseCategory } from '../lib/variantLogic'
 
 // Stocker les états de jeu en mémoire
@@ -51,23 +51,30 @@ export function initializeGame(
   players: { id: string; name: string; userId?: string }[],
   variant: GameVariant = 'classic'
 ): GameState {
+  // Mode développement : pré-remplir les scores pour des tests rapides
+  const isDevelopment = process.env.NODE_ENV !== 'production'
+  
   const gameState: GameState = {
     roomId,
     players: players.sort(() => Math.random() - 0.5).map(p => ({
       id: p.id,
       name: p.name,
       userId: p.userId,
-      scoreSheet: createEmptyScoreSheet(),
-      totalScore: 0,
+      scoreSheet: isDevelopment ? createDevScoreSheet() : createEmptyScoreSheet(),
+      totalScore: isDevelopment ? calculateTotalScore(createDevScoreSheet()) : 0,
       abandoned: false,
     })),
     currentPlayerIndex: 0,
     dice: createDice(),
     rollsLeft: 3,
-    turnNumber: 1,
+    turnNumber: isDevelopment ? 13 : 1, // Dernier tour en mode dev
     gameStatus: 'playing',
     winner: null,
     variant,
+  }
+  
+  if (isDevelopment) {
+    console.log('🔧 Mode développement : Scores pré-remplis (sauf "chance") pour tests rapides')
   }
   
   games.set(roomId, gameState)

@@ -161,6 +161,28 @@ export function createEmptyScoreSheet(): ScoreSheet {
 }
 
 /**
+ * Crée une feuille de score pré-remplie pour le développement
+ * Toutes les catégories sont remplies sauf "chance" pour faciliter les tests
+ */
+export function createDevScoreSheet(): ScoreSheet {
+  return {
+    ones: 3,        // 3 dés de 1
+    twos: 6,        // 3 dés de 2
+    threes: 9,      // 3 dés de 3
+    fours: 12,      // 3 dés de 4
+    fives: 15,      // 3 dés de 5
+    sixes: 18,      // 3 dés de 6
+    threeOfKind: 20,
+    fourOfKind: 22,
+    fullHouse: 25,
+    smallStraight: 30,
+    largeStraight: 40,
+    yams: 50,
+    chance: null,   // Seule catégorie vide pour tester la fin de partie
+  }
+}
+
+/**
  * Vérifie si toutes les catégories sont remplies
  */
 export function isScoreSheetComplete(scoreSheet: ScoreSheet): boolean {
