@@ -95,9 +95,9 @@ function DieDotsDisplay({ value }: { value: number }) {
     
     const patterns = {
       1: (
-        <div className="grid grid-cols-3 gap-1 w-full h-full p-2">
+        <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
           <div></div><div></div><div></div>
-          <div></div><div className={dotClass}></div><div></div>
+          <div></div><div className="flex items-center justify-center"><div className={dotClass}></div></div><div></div>
           <div></div><div></div><div></div>
         </div>
       ),

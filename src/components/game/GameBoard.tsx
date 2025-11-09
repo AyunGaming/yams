@@ -126,7 +126,7 @@ export default function GameBoard({
               ) : (
                 <>
                   <span>⏳</span>
-                  <span>{currentPlayer.name}</span>
+                  <span>Au tour de {currentPlayer.name}</span>
                 </>
               )}
             </div>
