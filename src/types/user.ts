@@ -24,6 +24,10 @@ export interface UserProfile {
   meilleure_serie_victoires: number
   serie_victoires_actuelle: number
 
+  // Système de leveling
+  xp: number
+  level: number
+
   // Métadonnées
   created_at: string
   updated_at: string
@@ -54,6 +58,7 @@ export interface UpdateStatsParams {
   won: boolean
   abandoned?: boolean
   yams_count?: number
+  xp_gained?: number
 }
 
 /**

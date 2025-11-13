@@ -137,6 +137,9 @@ export function setupGameHandlers(
         // Compter les Yams réalisés
         const yamsCount = countYamsInScoreSheet(abandoningPlayer.scoreSheet)
 
+        // En cas d'abandon, le joueur ne gagne pas d'XP
+        const xpGained = 0
+
         // Enregistrer les statistiques d'abandon
         const result = await updateUserStats(supabase, {
           user_id: userId,
@@ -144,6 +147,7 @@ export function setupGameHandlers(
           won: false,
           abandoned: true,
           yams_count: yamsCount,
+          xp_gained: xpGained,
         })
 
         if (!result.success) {

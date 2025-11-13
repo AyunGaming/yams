@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useSupabase } from './Providers'
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { UserStats } from '@/types/user'
+import XPBar from './XPBar'
 
 interface UserProfileProps {
   /**
@@ -148,13 +149,16 @@ export default function UserProfile({ detailed = true, userId }: UserProfileProp
               )}
             </div>
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="card-title text-2xl">{profile.username}</h2>
-            {profile.parties_jouees > 0 && (
-              <p className="text-base-content/60">
-                Niveau {Math.floor(profile.parties_jouees / 5) + 1}
-              </p>
-            )}
+            {/* Barre d'XP */}
+            <div className="mt-2">
+              <XPBar 
+                currentXp={profile.xp || 0} 
+                currentLevel={profile.level || 1}
+                size="md"
+              />
+            </div>
           </div>
         </div>
 

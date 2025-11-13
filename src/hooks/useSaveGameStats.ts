@@ -61,6 +61,14 @@ export function useSaveGameStats({
         // Compter le nombre de Yams réalisés
         const yamsCount = countYamsInScoreSheet(myPlayer.scoreSheet)
 
+        // Calculer l'XP gagné
+        // XP = score de la partie / 10
+        // +25 XP si le joueur gagne
+        let xpGained = Math.floor(myPlayer.totalScore / 10)
+        if (isWinner) {
+          xpGained += 25
+        }
+
         // Mettre à jour les stats
         const result = await updateUserStats(supabase, {
           user_id: user.id,
@@ -68,6 +76,7 @@ export function useSaveGameStats({
           won: isWinner,
           abandoned: myPlayer.abandoned,
           yams_count: yamsCount,
+          xp_gained: xpGained,
         })
 
         if (result.success) {

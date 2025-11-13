@@ -5,6 +5,39 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { UpdateStatsParams, UserProfile } from '@/types/user'
 import { ScoreSheet } from '@/types/game'
+import { LEVELING_BASE, LEVELING_GROWTH } from './levelingConfig'
+
+/**
+ * Calcule l'XP nécessaire pour atteindre un level donné
+ * Formule: floor(base * ((growth^(level+1) - 1) / (growth - 1)))
+ * Utilise les constantes globales de configuration
+ */
+export function xpForLevel(level: number): number {
+  if (level <= 0) return 0
+  return Math.floor(
+    LEVELING_BASE * ((Math.pow(LEVELING_GROWTH, level + 1) - 1) / (LEVELING_GROWTH - 1))
+  )
+}
+
+/**
+ * Calcule le level à partir de l'XP total
+ * Trouve le level maximum tel que xpForLevel(level) <= xpTotal
+ * Utilise les constantes globales de configuration
+ */
+export function levelFromXp(xp: number): number {
+  if (xp <= 0) return 1
+
+  let level = 1
+  while (true) {
+    const xpForNextLevel = xpForLevel(level + 1)
+    if (xpForNextLevel > xp) {
+      return level
+    }
+    level++
+    // Sécurité: éviter les boucles infinies (level max 1000)
+    if (level > 1000) return 1000
+  }
+}
 
 /**
  * Met à jour les statistiques d'un utilisateur après une partie
@@ -21,6 +54,7 @@ export async function updateUserStats(
       p_won: params.won,
       p_abandoned: params.abandoned || false,
       p_yams_count: params.yams_count || 0,
+      p_xp_gained: params.xp_gained || 0,
     })
 
     if (error) {
