@@ -51,6 +51,9 @@ export default function GameBoard({
   const nextCategory = gameState.variant !== 'classic' && myPlayer
     ? getNextCategory(gameState.variant, myPlayer.scoreSheet)
     : null
+
+  // Vérifier si tous les dés sont verrouillés
+  const allDiceLocked = gameState.dice.every(die => die.locked)
   
   // Formater le temps restant en MM:SS
   const formatTime = (seconds: number): string => {
@@ -203,7 +206,7 @@ export default function GameBoard({
             {myTurn && (
               <button
                 onClick={onRollDice}
-                disabled={gameState.rollsLeft === 0 || isRolling}
+                disabled={gameState.rollsLeft === 0 || isRolling || allDiceLocked}
                 className="btn btn-primary btn-lg mt-4 gap-2"
               >
                 {isRolling ? (
