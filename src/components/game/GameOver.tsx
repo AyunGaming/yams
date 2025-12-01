@@ -33,7 +33,23 @@ export default function GameOver({ gameState, mySocketId, socket, amIHost }: Gam
   })
 
   const winner = sortedPlayers.find((p) => !p.abandoned) || sortedPlayers[0]
-  const isWinner = winner.id === mySocketId && !winner.abandoned
+
+  // Tous les joueurs actifs ayant le meilleur score sont considérés comme vainqueurs
+  const activePlayers = gameState.players.filter((p) => !p.abandoned)
+  const topScore =
+    activePlayers.length > 0
+      ? Math.max(...activePlayers.map((p) => p.totalScore))
+      : null
+
+  const myPlayer = mySocketId
+    ? gameState.players.find((p) => p.id === mySocketId)
+    : null
+
+  const isWinner =
+    !!myPlayer &&
+    !myPlayer.abandoned &&
+    topScore !== null &&
+    myPlayer.totalScore === topScore
 
   // Sauvegarder les statistiques automatiquement
   useSaveGameStats({
