@@ -3,6 +3,16 @@ import { authenticateUser } from '@/lib/authServer'
 
 const COOKIE_NAME = 'yams_auth_token'
 
+// Par défaut: secure = true en production, false en dev.
+// Surchargable via AUTH_COOKIE_SECURE pour les environnements HTTP derrière Docker/proxy.
+const isProd = process.env.NODE_ENV === 'production'
+const COOKIE_SECURE =
+  process.env.AUTH_COOKIE_SECURE === 'true'
+    ? true
+    : process.env.AUTH_COOKIE_SECURE === 'false'
+      ? false
+      : isProd
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -30,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     response.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: COOKIE_SECURE,
       sameSite: 'lax',
       path: '/',
       expires,
