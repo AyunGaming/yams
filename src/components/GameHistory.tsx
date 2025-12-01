@@ -28,7 +28,7 @@ interface Game {
 }
 
 export default function GameHistory() {
-  const { supabase, user } = useSupabase()
+  const { user } = useSupabase()
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
   const lastFetchedUserId = useRef<string | null>(null)
@@ -40,7 +40,6 @@ export default function GameHistory() {
     const fetchGames = async () => {
       if (!userId) return
 
-      // Éviter de recharger si on a déjà les données pour cet utilisateur
       if (lastFetchedUserId.current === userId) {
         setLoading(false)
         return
@@ -49,41 +48,25 @@ export default function GameHistory() {
       setLoading(true)
       lastFetchedUserId.current = userId
 
-      // Récupérer les parties terminées (limite augmentée pour filtrer ensuite)
-      const { data, error } = await supabase
-        .from('games')
-        .select('id, owner, status, created_at, winner, players_scores, variant')
-        .eq('status', 'finished')
-        .order('created_at', { ascending: false })
-        .limit(50) // Optimisé : 50 au lieu de 100
+      try {
+        const res = await fetch('/api/history', { credentials: 'include' })
+        const json = await res.json()
+        if (!res.ok) {
+          console.error('Erreur lors du chargement de l\'historique:', json.error)
+          setLoading(false)
+          return
+        }
 
-      if (error) {
+        setGames((json.data || []) as Game[])
+        setLoading(false)
+      } catch (error) {
         console.error('Erreur lors du chargement de l\'historique:', error)
         setLoading(false)
-        return
       }
-
-      // Filtrer les parties où l'utilisateur a participé et garder les 10 plus récentes
-      const myGames = (data || [])
-        .filter((game) => {
-          // Vérifier si l'utilisateur est l'owner
-          if (game.owner === userId) return true
-          
-          // Vérifier si l'utilisateur est dans players_scores
-          if (game.players_scores && Array.isArray(game.players_scores)) {
-            return game.players_scores.some((p: PlayerScore) => p.user_id === userId)
-          }
-          
-          return false
-        })
-        .slice(0, 10) // Garder seulement les 10 plus récentes
-
-      setGames(myGames)
-      setLoading(false)
     }
 
     fetchGames()
-  }, [userId, supabase])
+  }, [userId])
 
   if (loading) {
     return (

@@ -6,7 +6,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useRouter } from 'next/navigation'
-import { SupabaseClient, User } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 import { GameState } from '@/types/game'
 import { UserProfile } from '@/types/user'
@@ -18,8 +17,7 @@ type Player = { id: string; name: string }
 
 interface UseGameSocketParams {
   uuid: string
-  user: User | null
-  supabase: SupabaseClient
+  user: { id: string; email?: string } | null
   authLoading: boolean
   userProfile?: UserProfile | null
   shouldConnect?: boolean // Permet de retarder la connexion
@@ -45,7 +43,6 @@ interface UseGameSocketReturn {
 export function useGameSocket({
   uuid,
   user,
-  supabase,
   authLoading,
   userProfile,
   shouldConnect = true, // Par défaut, on se connecte
@@ -95,10 +92,10 @@ export function useGameSocket({
     const initSocket = async () => {
       isConnectingRef.current = true
 
-      const playerName = await fetchUsername(user, supabase, userProfile)
+      const playerName = await fetchUsername(user, userProfile)
       if (!playerName) return
 
-      const token = await fetchAuthToken(supabase)
+      const token = await fetchAuthToken()
       if (!token) {
         logger.error("Pas de token d'authentification disponible")
         isConnectingRef.current = false
@@ -137,7 +134,7 @@ export function useGameSocket({
         isConnectingRef.current = false
 
         // Tentative de reconnexion après redémarrage serveur
-        const handled = await handleServerRestart(error, socketRef, supabase, router, initSocket)
+          const handled = await handleServerRestart(error, socketRef, router, initSocket)
         if (handled) return
 
         if (error.message.includes('Authentication')) {

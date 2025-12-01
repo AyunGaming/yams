@@ -9,7 +9,7 @@ import { VARIANT_NAMES, VARIANT_DESCRIPTIONS } from '@/lib/variantLogic'
 
 export default function CreateGame() {
   const router = useRouter()
-  const { supabase, user } = useSupabase()
+  const { user } = useSupabase()
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState<GameVariant>('classic')
@@ -19,8 +19,8 @@ export default function CreateGame() {
     console.log('[CREATE] 2. User:', user?.id)
     console.log('[CREATE] Variante choisie:', selectedVariant)
     
-    if (!user || !supabase) {
-      console.log('[CREATE] ❌ Pas d\'utilisateur ou supabase, redirection vers login')
+    if (!user) {
+      console.log('[CREATE] ❌ Pas d\'utilisateur, redirection vers login')
       return router.push('/login')
     }
 
@@ -35,31 +35,29 @@ export default function CreateGame() {
     console.log('[CREATE] 4. ID généré:', id)
 
     try {
-      console.log('[CREATE] 5. Tentative d\'insertion dans Supabase...')
-      const { data, error } = await supabase.from('games').insert([
-        {
-          id,
-          status: 'waiting',
-          owner: user.id,
-          variant: selectedVariant,
-          created_at: new Date().toISOString(),
+      console.log('[CREATE] 5. Appel API /api/games...')
+      const response = await fetch('/api/games', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      ]).select()
+        body: JSON.stringify({ id, variant: selectedVariant }),
+      })
 
-      console.log('[CREATE] 6. Réponse Supabase:', { data, error })
+      const data = await response.json()
 
-      if (error) {
-        console.error('[CREATE] ❌ Erreur:', error)
+      console.log('[CREATE] 6. Réponse API /api/games:', { status: response.status, data })
+
+      if (!response.ok) {
+        console.error('[CREATE] ❌ Erreur API:', data)
         setLoading(false)
         console.log('[CREATE] 7. Loading désactivé')
-        alert(`Erreur lors de la création de la partie: ${error.message}`)
+        alert(`Erreur lors de la création de la partie: ${data.error || 'Erreur inconnue'}`)
       } else {
         console.log('[CREATE] ✅ Partie créée! Redirection...')
         setShowModal(false)
-        // Petit délai pour laisser Supabase répliquer les données
         await new Promise(resolve => setTimeout(resolve, 200))
         router.push(`/game/${id}`)
-        // Le loading reste actif pendant la redirection
       }
     } catch (err) {
       console.error('[CREATE] ❌ Exception:', err)

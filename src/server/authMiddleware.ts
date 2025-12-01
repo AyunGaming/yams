@@ -2,34 +2,35 @@
  * Middleware d'authentification pour Socket.IO
  */
 
+import { verifyJwtToken } from '@/lib/authServer'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
- * Vérifie un token JWT Supabase
+ * Vérifie un token JWT applicatif (indépendant de Supabase Auth)
  */
-export async function verifyToken(token: string): Promise<{ 
+export async function verifyToken(token: string): Promise<{
   valid: boolean
   userId?: string
-  error?: string 
+  error?: string
 }> {
   try {
     if (!token) {
       return { valid: false, error: 'Token manquant' }
     }
 
-    // Récupérer le client Supabase Admin
-    const supabase = createAdminClient()
-    if (!supabase) {
-      return { valid: false, error: 'Supabase admin client non disponible' }
+    console.log('[SOCKET AUTH] Token reçu (début):', token.substring(0, 30) + '...')
+
+    const payload = verifyJwtToken(token)
+    if (!payload) {
+      return { valid: false, error: 'Token invalide' }
     }
-    // Vérifier le token avec Supabase
-    const { data, error } = await supabase.auth.getUser(token)
-    if (error || !data.user) {
-      return { valid: false, error: error?.message || 'Token invalide' }
-    }
-    return { valid: true, userId: data.user.id }
+
+    return { valid: true, userId: payload.id }
   } catch (error) {
-    return { valid: false, error: error instanceof Error ? error.message : 'Erreur inconnue' }
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Erreur inconnue',
+    }
   }
 }
 

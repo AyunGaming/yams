@@ -3,18 +3,16 @@
  * Réduit la complexité de useGameSocket en extrayant les fonctions utilitaires
  */
 
-import { SupabaseClient, User } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 import { tokenManager } from '@/lib/tokenManager'
 import { UserProfile } from '@/types/user'
 
 /**
  * Récupère le username de l'utilisateur
- * Utilise d'abord le userProfile du contexte, puis fallback sur Supabase
+ * Utilise d'abord le userProfile du contexte
  */
 export async function fetchUsername(
-  user: User,
-  supabase: SupabaseClient,
+  user: { id: string; email?: string },
   userProfile?: UserProfile | null
 ): Promise<string> {
   // OPTIMISATION : Utiliser le profil déjà chargé dans le contexte
@@ -23,38 +21,20 @@ export async function fetchUsername(
     return userProfile.username
   }
 
-  // Fallback : Récupérer depuis Supabase
-  try {
-    const { data, error } = await supabase.auth.getUser()
-
-    if (error) {
-      logger.error('Erreur lors de la récupération du user:', error)
-      return user.email || 'Joueur'
-    }
-
-    return data.user?.user_metadata?.username || data.user?.email || 'Joueur'
-  } catch (error) {
-    logger.error('Erreur lors de la récupération du username:', error)
-    return user.email || 'Joueur'
-  }
+  // Fallback : utiliser l'email ou un nom générique
+  return user.email || 'Joueur'
 }
 
 /**
  * Récupère le token d'authentification
- * Utilise d'abord localStorage, puis fallback sur Supabase
+ * Utilise le token applicatif stocké en localStorage
  */
-export async function fetchAuthToken(supabase: SupabaseClient): Promise<string | null> {
-  // OPTIMISATION : Récupérer le token depuis localStorage d'abord
-  let token = tokenManager.getToken()
-  
+export async function fetchAuthToken(): Promise<string | null> {
+  const token = tokenManager.getToken()
   if (!token || tokenManager.isTokenExpired()) {
-    logger.debug('Token local absent ou expiré, récupération depuis Supabase')
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    token = session?.access_token || null
+    logger.error('Token applicatif absent ou expiré')
+    return null
   }
-
   return token
 }
 

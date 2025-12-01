@@ -1,17 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSupabase } from './Providers'
 import { tokenManager } from '@/lib/tokenManager'
 
 export default function TokenStatus() {
-  const { accessToken } = useSupabase()
+  const [hasToken, setHasToken] = useState(false)
   const [isExpired, setIsExpired] = useState(false)
 
   useEffect(() => {
-    // Vérifie l'état du token toutes les secondes
     const checkToken = () => {
-      setIsExpired(tokenManager.isTokenExpired())
+      const token = tokenManager.getToken()
+      setHasToken(!!token)
+      setIsExpired(token ? tokenManager.isTokenExpired() : true)
     }
 
     checkToken()
@@ -20,7 +20,7 @@ export default function TokenStatus() {
     return () => clearInterval(intervalId)
   }, [])
 
-  if (!accessToken) return null
+  if (!hasToken) return null
 
   return (
     <div className="alert alert-info shadow-lg">
@@ -36,9 +36,7 @@ export default function TokenStatus() {
         </div>
         
         <div className="text-sm opacity-80">
-          <p className="font-mono text-xs break-all">
-            Token: {accessToken.substring(0, 30)}...
-          </p>
+          <p className="font-mono text-xs break-all">Token d’authentification actif.</p>
           <p className="mt-1">
             Votre session est sécurisée par un token JWT qui se rafraîchit automatiquement.
           </p>

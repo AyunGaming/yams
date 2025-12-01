@@ -29,7 +29,7 @@ export default function GamePage() {
   const params = useParams()
   const uuid = params?.uuid as string
   const router = useRouter()
-  const { user, userProfile, supabase, isLoading: authLoading } = useSupabase()
+  const { user, userProfile, isLoading: authLoading } = useSupabase()
   const { setIsInActiveGame, setSocket, setRoomId } = useGameProtection()
 
   // Vérification de l'existence de la partie
@@ -41,7 +41,6 @@ export default function GamePage() {
     {
       uuid,
       user,
-      supabase: supabase!,
       authLoading,
       userProfile, // Passer le profil pour éviter une requête supplémentaire
       shouldConnect: gameExists === true, // Ne se connecter que si la partie existe
@@ -151,16 +150,13 @@ export default function GamePage() {
   // SÉCURITÉ : Vérifier l'existence de la partie AVANT tout
   useEffect(() => {
     const checkGameExists = async () => {
-      if (!uuid || !supabase || authLoading || isRedirectingRef.current) return
+      if (!uuid || authLoading || isRedirectingRef.current) return
       
       try {
-        const { data, error } = await supabase
-          .from('games')
-          .select('id, status, variant')
-          .eq('id', uuid)
-          .single()
-        
-        if (error || !data) {
+        const res = await fetch(`/api/games/${uuid}/meta`)
+        const json = await res.json()
+
+        if (!res.ok || !json.data) {
           console.log('[GAME] ❌ Partie introuvable:', uuid)
           if (!isRedirectingRef.current) {
             isRedirectingRef.current = true
@@ -170,19 +166,9 @@ export default function GamePage() {
           return
         }
 
-        if (data.status === 'finished') {
-          console.log('[GAME] ❌ Partie déjà terminée:', uuid)
-          if (!isRedirectingRef.current) {
-            isRedirectingRef.current = true
-            alert('Cette partie est déjà terminée.')
-            router.replace('/dashboard')
-          }
-          return
-        }
-
         // La partie existe, on peut continuer
         setGameExists(true)
-        setVariant(data.variant || 'classic')
+        setVariant(json.data.variant || 'classic')
         setVariantLoading(false)
       } catch (err) {
         console.error('Erreur lors de la vérification de la partie:', err)
@@ -195,7 +181,7 @@ export default function GamePage() {
     }
     
     checkGameExists()
-  }, [uuid, supabase, authLoading, router])
+  }, [uuid, authLoading, router])
 
   // Gérer l'animation des dés
   useEffect(() => {

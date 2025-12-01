@@ -32,14 +32,9 @@ export async function verifyGameExists(
       return false
     }
 
-    if (gameData.status === 'finished') {
-      console.log(`[ROOM] ❌ Tentative de rejoindre une partie terminée: ${roomId}`)
-      socket.emit('game_not_found', { 
-        message: 'Cette partie est terminée.' 
-      })
-      return false
-    }
-
+    // Même si la partie est terminée en base (status = finished),
+    // on autorise la connexion pour afficher l'écran de résultats.
+    // Les règles côté client (GamePage) gèrent l'affichage de GameOver.
     return true
   } catch (err) {
     console.error('[ROOM] Erreur lors de la vérification de la partie:', err)

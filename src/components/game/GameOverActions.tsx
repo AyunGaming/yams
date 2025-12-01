@@ -7,15 +7,17 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Socket } from 'socket.io-client'
 import { generateGameId } from '@/lib/gameIdGenerator'
-import { SupabaseClient, User } from '@supabase/supabase-js'
 import { GameState } from '@/types/game'
+
+interface MinimalUser {
+  id: string
+}
 
 interface GameOverActionsProps {
   gameState: GameState
   mySocketId: string | undefined
   socket: Socket | null
-  supabase: SupabaseClient
-  user: User | null
+  user: MinimalUser | null
   amIHost: boolean
 }
 
@@ -26,7 +28,6 @@ export default function GameOverActions({
   gameState,
   mySocketId,
   socket,
-  supabase,
   user,
   amIHost,
 }: GameOverActionsProps) {
@@ -67,17 +68,19 @@ export default function GameOverActions({
     await new Promise(resolve => setTimeout(resolve, 50))
 
     try {
-      // Créer une nouvelle partie dans Supabase
+      // Créer une nouvelle partie via l'API interne
       const newGameId = generateGameId()
-      const { error } = await supabase.from('games').insert({
-        id: newGameId,
-        owner: user.id,
-        status: 'waiting',
-        created_at: new Date().toISOString(),
+      const res = await fetch('/api/games', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: newGameId, variant: gameState.variant }),
       })
+      const data = await res.json()
 
-      if (error) {
-        console.error('[REMATCH] Erreur lors de la création:', error)
+      if (!res.ok) {
+        console.error('[REMATCH] Erreur lors de la création:', data)
         alert('Erreur lors de la création de la nouvelle partie')
         isCreatingRematch.current = false
         setCreatingRematch(false)

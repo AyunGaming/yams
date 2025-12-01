@@ -4,19 +4,28 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSupabase } from "@/components/Providers"
 import { useGameProtection } from "@/contexts/GameProtectionContext"
-import { cleanupSession } from "@/lib/authUtils"
+import { tokenManager } from "@/lib/tokenManager"
 import ThemeToggle from "./ThemeToggle"
 
 export default function Navbar() {
-  const { supabase, user } = useSupabase()
+  const { user, refreshUserProfile } = useSupabase()
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { isInActiveGame, handleAbandonBeforeNavigation } = useGameProtection()
 
   const handleLogout = async () => {
-    if (!supabase) return
     setLoading(true)
-    await cleanupSession(supabase)
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error)
+    }
+
+    tokenManager.clearTokens()
+    await refreshUserProfile()
+
+    setLoading(false)
+    router.push('/login')
   }
 
   // Gestion de la navigation avec confirmation si en partie

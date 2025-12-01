@@ -3,11 +3,10 @@
 import { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import { useSupabase } from '@/components/Providers'
-import { getLeaderboard } from '@/lib/userStats'
 import { UserStats } from '@/types/user'
 
 export default function Leaderboard() {
-  const { supabase, user } = useSupabase()
+  const { user } = useSupabase()
   const [leaderboardData, setLeaderboardData] = useState<UserStats[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -15,9 +14,6 @@ export default function Leaderboard() {
 
   useEffect(() => {
     async function loadLeaderboard() {
-      if (!supabase) return
-      
-      // Éviter les rechargements multiples
       if (hasFetched.current) {
         setLoading(false)
         return
@@ -27,24 +23,25 @@ export default function Leaderboard() {
       setError(null)
       hasFetched.current = true
 
-      const { data, error: err } = await getLeaderboard(supabase, 10)
-
-      if (err) {
-        console.error('❌ Erreur chargement classement:', err)
-        setError(err)
+      try {
+        const res = await fetch('/api/leaderboard')
+        const json = await res.json()
+        if (!res.ok) {
+          setError(json.error || 'Erreur lors du chargement du classement.')
+          setLoading(false)
+          return
+        }
+        setLeaderboardData((json.data || []) as UserStats[])
         setLoading(false)
-        return
+      } catch (e) {
+        console.error('❌ Erreur chargement classement:', e)
+        setError('Erreur inattendue lors du chargement du classement.')
+        setLoading(false)
       }
-
-      if (data) {
-        setLeaderboardData(data as UserStats[])
-      }
-
-      setLoading(false)
     }
 
     loadLeaderboard()
-  }, [supabase])
+  }, [])
 
   if (loading) {
     return (

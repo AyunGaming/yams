@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useSupabase } from '@/components/Providers'
 
 export default function RegisterForm() {
-  const { supabase } = useSupabase()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [form, setForm] = useState({
@@ -22,22 +20,31 @@ export default function RegisterForm() {
     setLoading(true)
     setMessage('')
 
-    const { data, error } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        data: {
-          username: form.username,
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        emailRedirectTo: `${window.location.origin}/login`,
-      },
-    })
+        body: JSON.stringify(form),
+      })
 
-    setLoading(false)
+      const data = await response.json()
+      setLoading(false)
 
-    if (error) return setMessage(error.message)
-    if (data?.user) {
-      setMessage('✅ Vérifie ton email pour confirmer ton inscription.')
+      if (!response.ok) {
+        setMessage(data.error || 'Erreur lors de la création du compte.')
+        return
+      }
+
+      setMessage(
+        data.message ||
+          '✅ Compte créé. Vérifie ton email pour confirmer ton inscription.'
+      )
+    } catch (error) {
+      console.error('Erreur inscription:', error)
+      setLoading(false)
+      setMessage('Erreur inattendue lors de la création du compte.')
     }
   }
 

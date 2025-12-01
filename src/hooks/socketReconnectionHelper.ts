@@ -4,9 +4,9 @@
 
 import { Socket } from 'socket.io-client'
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
-import { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 import { clearServerRestartId } from './socketHelpers'
+import { tokenManager } from '@/lib/tokenManager'
 
 /**
  * Gère la reconnexion automatique après un redémarrage serveur
@@ -14,7 +14,6 @@ import { clearServerRestartId } from './socketHelpers'
 export async function handleServerRestart(
   error: Error & { message: string },
   socketRef: { current: Socket | null },
-  supabase: SupabaseClient,
   router: AppRouterInstance,
   initSocket: () => Promise<void>
 ): Promise<boolean> {
@@ -36,14 +35,9 @@ export async function handleServerRestart(
   }
 
   try {
-    // Régénérer un nouveau token depuis Supabase
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession()
-
-    if (sessionError || !session?.access_token) {
-      logger.error('Impossible de récupérer une session valide:', sessionError)
+    // Vérifier que le token applicatif est encore valide
+    if (!tokenManager.isTokenValid()) {
+      logger.error('Session expirée après redémarrage serveur')
       alert('Le serveur a redémarré et votre session a expiré. Veuillez vous reconnecter.')
       router.push('/login')
       return true

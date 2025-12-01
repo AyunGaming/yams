@@ -1,15 +1,28 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { tokenManager } from '@/lib/tokenManager'
 import { useSupabase } from '@/components/Providers'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { supabase } = useSupabase()
+  const searchParams = useSearchParams()
+  const { refreshUserProfile } = useSupabase()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [form, setForm] = useState({ email: '', password: '' })
+
+  useEffect(() => {
+    const confirm = searchParams.get('confirm')
+    if (confirm === 'success') {
+      setMessage('✅ Email confirmé. Tu peux maintenant te connecter.')
+    } else if (confirm === 'error') {
+      setMessage(
+        '❌ Erreur lors de la confirmation de ton email. Le lien est peut-être expiré.'
+      )
+    }
+  }, [searchParams])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -20,23 +33,36 @@ export default function LoginPage() {
     setLoading(true)
     setMessage('')
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
-    })
-
-    setLoading(false)
-    
-    if (error) {
-      setMessage(`❌ ${error.message}`)
-    } else if (data.session) {
-      console.log('🔑 Connexion réussie - Token reçu:', {
-        accessToken: data.session.access_token.substring(0, 20) + '...',
-        expiresIn: data.session.expires_in,
-        refreshToken: data.session.refresh_token ? '✅' : '❌'
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form),
       })
+
+      const data = await response.json()
+      setLoading(false)
+
+      if (!response.ok) {
+        setMessage(`❌ ${data.error || 'Erreur lors de la connexion.'}`)
+        return
+      }
+
+      if (data.token && data.expiresIn) {
+        tokenManager.setToken(data.token, data.expiresIn)
+      }
+
+      // Rafraîchir le contexte d'authentification (Navbar, dashboard, etc.)
+      await refreshUserProfile()
+
       setMessage('✅ Connexion réussie ! Redirection...')
       setTimeout(() => router.push('/dashboard'), 500)
+    } catch (error) {
+      console.error('Erreur connexion:', error)
+      setLoading(false)
+      setMessage('❌ Erreur inattendue lors de la connexion.')
     }
   }
 
@@ -76,6 +102,12 @@ export default function LoginPage() {
         )}
 
         <p className="text-center text-sm mt-3">
+          <a href="/reset-password" className="link link-primary">
+            Mot de passe oublié ?
+          </a>
+        </p>
+
+        <p className="text-center text-sm mt-1">
           Pas encore de compte ?{' '}
           <a href="/register" className="link link-primary">
             Inscris-toi

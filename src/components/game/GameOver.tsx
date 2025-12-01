@@ -22,7 +22,7 @@ interface GameOverProps {
  * Composant d'écran de fin de partie
  */
 export default function GameOver({ gameState, mySocketId, socket }: GameOverProps) {
-  const { supabase, user, refreshUserProfile } = useSupabase()
+  const { userProfile, refreshUserProfile } = useSupabase()
 
   // Déterminer si je suis l'hôte
   const amIHost = gameState.players[0]?.id === mySocketId
@@ -41,8 +41,8 @@ export default function GameOver({ gameState, mySocketId, socket }: GameOverProp
   useSaveGameStats({
     gameState,
     mySocketId,
-    user,
-    supabase,
+    // On ne passe que l'ID utilisateur, typé simplement
+    user: userProfile ? { id: userProfile.id } : null,
     isWinner,
     refreshUserProfile,
   })
@@ -68,8 +68,7 @@ export default function GameOver({ gameState, mySocketId, socket }: GameOverProp
         gameState={gameState}
         mySocketId={mySocketId}
         socket={socket}
-        supabase={supabase}
-        user={user}
+        user={userProfile ? { id: userProfile.id } : null}
         amIHost={amIHost}
       />
     </div>

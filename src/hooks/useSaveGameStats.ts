@@ -4,16 +4,18 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { SupabaseClient, User } from '@supabase/supabase-js'
 import { GameState } from '@/types/game'
-import { updateUserStats, countYamsInScoreSheet } from '@/lib/userStats'
+import { countYamsInScoreSheet } from '@/lib/userStats'
 import { logger } from '@/lib/logger'
+
+interface MinimalUser {
+  id: string
+}
 
 interface UseSaveGameStatsParams {
   gameState: GameState
   mySocketId: string | undefined
-  user: User | null
-  supabase: SupabaseClient
+  user: MinimalUser | null
   isWinner: boolean
   refreshUserProfile: () => Promise<void>
 }
@@ -25,7 +27,6 @@ export function useSaveGameStats({
   gameState,
   mySocketId,
   user,
-  supabase,
   isWinner,
   refreshUserProfile,
 }: UseSaveGameStatsParams) {
@@ -69,22 +70,29 @@ export function useSaveGameStats({
           xpGained += 25
         }
 
-        // Mettre à jour les stats
-        const result = await updateUserStats(supabase, {
-          user_id: user.id,
-          score: myPlayer.totalScore,
-          won: isWinner,
-          abandoned: myPlayer.abandoned,
-          yams_count: yamsCount,
-          xp_gained: xpGained,
+        const res = await fetch('/api/stats/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            score: myPlayer.totalScore,
+            won: isWinner,
+            abandoned: myPlayer.abandoned,
+            yams_count: yamsCount,
+            xp_gained: xpGained,
+          }),
         })
 
-        if (result.success) {
+        const data = await res.json()
+
+        if (res.ok && data.success) {
           logger.success('Statistiques sauvegardées avec succès')
           // Rafraîchir le profil pour afficher les nouvelles stats
           await refreshUserProfile()
         } else {
-          logger.error('Erreur lors de la sauvegarde des stats:', result.error)
+          logger.error('Erreur lors de la sauvegarde des stats:', data.error)
           // En cas d'erreur, réinitialiser
           statsUpdatedRef.current = false
           localStorage.removeItem(statsKey)
