@@ -245,9 +245,9 @@ export default function GamePage() {
     })
   }
 
-  const onRollDice = () => handleRollDice(socket, uuid, setIsRolling, setRollCount)
+  const onRollDice = () => handleRollDice(socket, uuid, gameState, setIsRolling, setRollCount)
 
-  const onToggleDieLock = (dieIndex: number) => handleToggleDieLock(socket, uuid, dieIndex)
+  const onToggleDieLock = (dieIndex: number) => handleToggleDieLock(socket, uuid, gameState, dieIndex)
 
   const onChooseScore = (category: ScoreCategory) => handleChooseScore(socket, uuid, category)
 

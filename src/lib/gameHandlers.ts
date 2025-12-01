@@ -4,7 +4,7 @@
  */
 
 import { Socket } from 'socket.io-client'
-import { ScoreCategory } from '@/types/game'
+import { ScoreCategory, GameState } from '@/types/game'
 
 /**
  * Démarre la partie
@@ -52,14 +52,34 @@ export function handleLeaveGame(
 export function handleRollDice(
   socket: Socket | null,
   roomId: string,
+  gameState: GameState | null,
   setIsRolling: (value: boolean) => void,
   setRollCount: (fn: (prev: number) => number) => void
 ): void {
-  if (socket) {
-    setIsRolling(true)
-    setRollCount((prev) => prev + 1)
-    socket.emit('roll_dice', roomId)
+  if (!socket || !gameState) return
+  
+  // Vérifier que c'est bien le tour du joueur avant d'émettre
+  const currentPlayer = gameState.players[gameState.currentPlayerIndex]
+  if (currentPlayer.id !== socket.id) {
+    console.warn('[CLIENT] Tentative de lancer les dés alors que ce n\'est pas votre tour')
+    return
   }
+  
+  // Vérifier que le joueur n'a pas abandonné
+  if (currentPlayer.abandoned) {
+    console.warn('[CLIENT] Tentative de lancer les dés alors que le joueur a abandonné')
+    return
+  }
+  
+  // Vérifier qu'il reste des lancers
+  if (gameState.rollsLeft <= 0) {
+    console.warn('[CLIENT] Tentative de lancer les dés alors qu\'il ne reste plus de lancers')
+    return
+  }
+  
+  setIsRolling(true)
+  setRollCount((prev) => prev + 1)
+  socket.emit('roll_dice', roomId)
 }
 
 /**
@@ -68,11 +88,31 @@ export function handleRollDice(
 export function handleToggleDieLock(
   socket: Socket | null,
   roomId: string,
+  gameState: GameState | null,
   dieIndex: number
 ): void {
-  if (socket) {
-    socket.emit('toggle_die_lock', { roomId, dieIndex })
+  if (!socket || !gameState) return
+  
+  // Vérifier que c'est bien le tour du joueur avant d'émettre
+  const currentPlayer = gameState.players[gameState.currentPlayerIndex]
+  if (currentPlayer.id !== socket.id) {
+    console.warn('[CLIENT] Tentative de verrouiller un dé alors que ce n\'est pas votre tour')
+    return
   }
+  
+  // Vérifier que le joueur n'a pas abandonné
+  if (currentPlayer.abandoned) {
+    console.warn('[CLIENT] Tentative de verrouiller un dé alors que le joueur a abandonné')
+    return
+  }
+  
+  // Vérifier l'index du dé
+  if (dieIndex < 0 || dieIndex >= 5) {
+    console.warn('[CLIENT] Index de dé invalide:', dieIndex)
+    return
+  }
+  
+  socket.emit('toggle_die_lock', { roomId, dieIndex })
 }
 
 /**

@@ -242,7 +242,7 @@ export default function GameBoard({
             {myTurn && (
               <button
                 onClick={onRollDice}
-                disabled={gameState.rollsLeft === 0 || isRolling || allDiceLocked}
+                disabled={gameState.rollsLeft === 0 || isRolling || allDiceLocked || !myTurn}
                 className="btn btn-primary btn-lg mt-4 gap-2"
               >
                 {isRolling ? (

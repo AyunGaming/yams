@@ -26,6 +26,16 @@ export function setupGameHandlers(
    */
   socket.on('roll_dice', (roomId: string) => {
     const playerId = socket.id
+    const gameBeforeRoll = getGame(roomId)
+    if (!gameBeforeRoll) return
+    
+    // Vérifier que c'est bien le tour du joueur avant de traiter
+    const currentPlayer = gameBeforeRoll.players[gameBeforeRoll.currentPlayerIndex]
+    if (currentPlayer.id !== playerId) {
+      console.warn(`[GAME] ${playerId} a tenté de lancer les dés alors que c'est le tour de ${currentPlayer.id}`)
+      return
+    }
+    
     const gameState = rollDice(roomId, playerId)
     if (gameState) {
       // Signaler à tous les joueurs qu'un lancer a eu lieu (pour l'animation)
@@ -42,6 +52,16 @@ export function setupGameHandlers(
     'toggle_die_lock',
     ({ roomId, dieIndex }: { roomId: string; dieIndex: number }) => {
       const playerId = socket.id
+      const gameBeforeToggle = getGame(roomId)
+      if (!gameBeforeToggle) return
+      
+      // Vérifier que c'est bien le tour du joueur avant de traiter
+      const currentPlayer = gameBeforeToggle.players[gameBeforeToggle.currentPlayerIndex]
+      if (currentPlayer.id !== playerId) {
+        console.warn(`[GAME] ${playerId} a tenté de verrouiller un dé alors que c'est le tour de ${currentPlayer.id}`)
+        return
+      }
+      
       const gameState = toggleDieLock(roomId, playerId, dieIndex)
       if (gameState) {
         io.to(roomId).emit('game_update', gameState)
