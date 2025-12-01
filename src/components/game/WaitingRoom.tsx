@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
+import { Socket } from 'socket.io-client'
 import { GameVariant } from '@/types/game'
 import { VARIANT_NAMES } from '@/lib/variantLogic'
 
@@ -20,6 +21,9 @@ interface WaitingRoomProps {
   variant?: GameVariant
   variantLoading?: boolean
   preGameCountdown?: number | null
+  maxPlayers?: number
+  socket?: Socket | null
+  onMaxPlayersChange?: (maxPlayers: number) => void
 }
 
 /**
@@ -35,9 +39,37 @@ export default function WaitingRoom({
   variant = 'classic',
   variantLoading = false,
   preGameCountdown = null,
+  maxPlayers: initialMaxPlayers = 4,
+  socket,
+  onMaxPlayersChange,
 }: WaitingRoomProps) {
   const [copied, setCopied] = useState(false)
+  const [maxPlayers, setMaxPlayers] = useState(initialMaxPlayers)
+  const [updatingMaxPlayers, setUpdatingMaxPlayers] = useState(false)
   const messagesRef = useRef<HTMLDivElement>(null)
+
+  // Synchroniser avec la prop si elle change
+  useEffect(() => {
+    setMaxPlayers(initialMaxPlayers)
+  }, [initialMaxPlayers])
+
+  // Écouter les mises à jour de max_players depuis le serveur
+  useEffect(() => {
+    if (!socket) return
+
+    const handleMaxPlayersUpdated = ({ maxPlayers: newMax }: { maxPlayers: number }) => {
+      setMaxPlayers(newMax)
+      if (onMaxPlayersChange) {
+        onMaxPlayersChange(newMax)
+      }
+    }
+
+    socket.on('max_players_updated', handleMaxPlayersUpdated)
+
+    return () => {
+      socket.off('max_players_updated', handleMaxPlayersUpdated)
+    }
+  }, [socket, onMaxPlayersChange])
 
   // Références pour les sons du compte à rebours
   const countdownStartSoundRef = useRef<HTMLAudioElement | null>(null)
@@ -108,10 +140,27 @@ export default function WaitingRoom({
   }
 
   const canStart = players.length >= 2
-  const maxPlayers = 4
+
+  const handleMaxPlayersChange = async (newMax: number) => {
+    if (!isHost || !socket || updatingMaxPlayers) return
+    if (newMax < 2 || newMax > 8) return
+    if (newMax < players.length) {
+      alert(`Impossible de réduire le nombre max de joueurs à ${newMax} car il y a déjà ${players.length} joueur(s) dans la partie.`)
+      return
+    }
+
+    setUpdatingMaxPlayers(true)
+    socket.emit('update_max_players', { roomId: uuid, maxPlayers: newMax })
+    // On met à jour localement immédiatement pour un feedback rapide
+    setMaxPlayers(newMax)
+    if (onMaxPlayersChange) {
+      onMaxPlayersChange(newMax)
+    }
+    setUpdatingMaxPlayers(false)
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className={`container mx-auto px-4 py-8 ${maxPlayers >= 5 ? 'max-w-6xl' : 'max-w-4xl'}`}>
       {/* En-tête */}
       <div className="text-center mb-8">
         <h1 className="text-4xl md:text-5xl font-bold mb-3">
@@ -174,9 +223,50 @@ export default function WaitingRoom({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-base-content/70">Joueurs :</span>
-                  <span className="font-bold">
-                    {players.length} / {maxPlayers}
-                  </span>
+                  <div className="flex items-center gap-1 flex-nowrap">
+                    <span className="font-bold whitespace-nowrap text-sm">
+                      {players.length} /
+                    </span>
+                    {isHost ? (
+                      <div className={`dropdown dropdown-end ${updatingMaxPlayers || preGameCountdown !== null ? 'dropdown-disabled' : ''}`}>
+                        <label
+                          tabIndex={updatingMaxPlayers || preGameCountdown !== null ? -1 : 0}
+                          className="font-bold text-sm cursor-pointer hover:text-primary hover:underline transition-all flex items-center gap-1"
+                          title={updatingMaxPlayers || preGameCountdown !== null ? 'Modification impossible' : 'Cliquer pour modifier le nombre maximum de joueurs'}
+                        >
+                          {maxPlayers}
+                          {!updatingMaxPlayers && preGameCountdown === null && (
+                            <span className="text-xs opacity-60">▼</span>
+                          )}
+                        </label>
+                        <ul
+                          tabIndex={0}
+                          className="dropdown-content menu menu-xs bg-base-100 rounded-box shadow-lg border border-base-300 z-[1] p-1"
+                        >
+                          {[2, 3, 4, 5, 6, 7, 8].map((num) => (
+                            <li key={num}>
+                              <button
+                                type="button"
+                                className={num === maxPlayers ? 'active' : ''}
+                                onClick={() => {
+                                  if (updatingMaxPlayers || preGameCountdown !== null) return
+                                  handleMaxPlayersChange(num)
+                                  // Fermer le dropdown après sélection
+                                  const dropdown = document.activeElement as HTMLElement
+                                  dropdown?.blur()
+                                }}
+                                disabled={updatingMaxPlayers || preGameCountdown !== null}
+                              >
+                                {num}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <span className="font-bold text-sm">{maxPlayers}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-base-content/70">Minimum requis :</span>
@@ -250,7 +340,7 @@ export default function WaitingRoom({
               <h2 className="card-title mb-4">
                 👥 Joueurs connectés ({players.length})
               </h2>
-              <div className="space-y-3">
+              <div className={maxPlayers >= 5 ? "grid grid-cols-2 gap-3" : "space-y-3"}>
                 {players.map((p, index) => (
                   <div
                     key={p.id}
@@ -278,14 +368,14 @@ export default function WaitingRoom({
                       </div>
                     </div>
                     {/* Info joueur */}
-                    <div className="flex-1">
-                      <p className="font-semibold">{p.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">{p.name}</p>
                       {index === 0 && (
-                        <p className="text-xs text-primary">🎮 Hôte de la partie</p>
+                        <p className="text-xs text-primary">🎮 Hôte</p>
                       )}
                     </div>
                     {/* Badge */}
-                    {index === 0 && <span className="badge badge-primary">Hôte</span>}
+                    {index === 0 && <span className="badge badge-primary badge-sm flex-shrink-0">Hôte</span>}
                   </div>
                 ))}
 
@@ -295,7 +385,7 @@ export default function WaitingRoom({
                     key={`empty-${i}`}
                     className="flex items-center gap-3 bg-base-100/30 p-3 rounded-lg border-2 border-dashed border-base-content/10"
                   >
-                    <div className="avatar">
+                    <div className="avatar flex-shrink-0">
                       <div className="w-12 h-12 rounded-full ring ring-base-300/50 ring-offset-base-100 ring-offset-2 bg-base-300/50 relative">
                         {/* Icône utilisateur stylisé */}
                         <svg 
@@ -308,9 +398,9 @@ export default function WaitingRoom({
                         </svg>
                       </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-base-content/40 text-sm italic">
-                        En attente d&apos;un joueur...
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base-content/40 text-sm italic truncate">
+                        En attente...
                       </p>
                     </div>
                   </div>

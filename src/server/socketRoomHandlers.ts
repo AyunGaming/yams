@@ -141,6 +141,28 @@ export function setupRoomHandlers(
     // Récupérer les joueurs dans la room
     const players = getPlayersInRoom(io, roomId)
 
+    // Vérifier le nombre max de joueurs si la partie n'a pas démarré
+    if (!isGameStarted) {
+      try {
+        const { data: gameData } = await supabase
+          .from('games')
+          .select('max_players, owner')
+          .eq('id', roomId)
+          .single()
+
+        if (gameData && gameData.max_players) {
+          const maxPlayers = gameData.max_players
+          if (players.length >= maxPlayers) {
+            socket.emit('error', { message: `La partie est complète (${maxPlayers} joueurs maximum).` })
+            socket.leave(roomId)
+            return
+          }
+        }
+      } catch (err) {
+        console.error('[ROOM] Erreur vérification max_players:', err)
+      }
+    }
+
     if (isGameStarted) {
       // La partie est en cours : gérer la reconnexion
       handlePlayerReconnection(io, socket, roomId, userId, playerName)
@@ -151,6 +173,74 @@ export function setupRoomHandlers(
         started: false,
       })
       io.to(roomId).emit('system_message', `${playerName} a rejoint la partie`)
+    }
+  })
+
+  /**
+   * Mettre à jour le nombre maximum de joueurs (owner seulement)
+   */
+  socket.on('update_max_players', async ({ roomId, maxPlayers }: { roomId: string; maxPlayers: number }) => {
+    if (!socket.data.authenticated) {
+      socket.emit('error', { message: 'Non authentifié' })
+      return
+    }
+
+    // Vérifier que maxPlayers est valide
+    if (maxPlayers < 2 || maxPlayers > 8) {
+      socket.emit('error', { message: 'Le nombre de joueurs doit être entre 2 et 8.' })
+      return
+    }
+
+    try {
+      // Vérifier que l'utilisateur est l'owner de la partie
+      const { data: gameData, error: gameError } = await supabase
+        .from('games')
+        .select('owner, status')
+        .eq('id', roomId)
+        .single()
+
+      if (gameError || !gameData) {
+        socket.emit('error', { message: 'Partie introuvable.' })
+        return
+      }
+
+      const userId = socket.data.userId
+      if (gameData.owner !== userId) {
+        socket.emit('error', { message: 'Seul l\'hôte peut modifier le nombre maximum de joueurs.' })
+        return
+      }
+
+      // Vérifier que la partie n'a pas démarré
+      if (gameData.status !== 'waiting') {
+        socket.emit('error', { message: 'Impossible de modifier le nombre de joueurs une fois la partie démarrée.' })
+        return
+      }
+
+      // Vérifier que le nouveau max n'est pas inférieur au nombre actuel de joueurs
+      const players = getPlayersInRoom(io, roomId)
+      if (maxPlayers < players.length) {
+        socket.emit('error', { message: `Impossible de réduire à ${maxPlayers} joueurs car il y a déjà ${players.length} joueur(s) dans la partie.` })
+        return
+      }
+
+      // Mettre à jour dans la base de données
+      const { error: updateError } = await supabase
+        .from('games')
+        .update({ max_players: maxPlayers })
+        .eq('id', roomId)
+
+      if (updateError) {
+        console.error('[ROOM] Erreur mise à jour max_players:', updateError)
+        socket.emit('error', { message: 'Erreur lors de la mise à jour.' })
+        return
+      }
+
+      // Notifier tous les joueurs de la room
+      io.to(roomId).emit('max_players_updated', { maxPlayers })
+      io.to(roomId).emit('system_message', `Le nombre maximum de joueurs a été modifié à ${maxPlayers}.`)
+    } catch (err) {
+      console.error('[ROOM] Exception update_max_players:', err)
+      socket.emit('error', { message: 'Erreur inattendue lors de la mise à jour.' })
     }
   })
 

@@ -85,6 +85,7 @@ export default function GamePage() {
   const [variant, setVariant] = useState<GameVariant>('classic')
   const [variantLoading, setVariantLoading] = useState(true)
   const [ownerId, setOwnerId] = useState<string | null>(null)
+  const [maxPlayers, setMaxPlayers] = useState<number>(4)
 
   // Référence pour éviter de rejouer le son de début de partie plusieurs fois
   const hasPlayedGameStartSoundRef = useRef(false)
@@ -187,6 +188,7 @@ export default function GamePage() {
         setGameExists(true)
         setVariant(json.data.variant || 'classic')
         setOwnerId(json.data.owner || null)
+        setMaxPlayers(json.data.max_players || 4)
         setVariantLoading(false)
       } catch (err) {
         console.error('Erreur lors de la vérification de la partie:', err)
@@ -286,6 +288,9 @@ export default function GamePage() {
         variant={variant}
         variantLoading={variantLoading}
         preGameCountdown={preGameCountdown}
+        maxPlayers={maxPlayers}
+        socket={socket}
+        onMaxPlayersChange={setMaxPlayers}
       />
     )
   }
