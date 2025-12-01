@@ -171,6 +171,42 @@ export default function GameBoard({
         </div>
       </div>
 
+      {/* Panneau des scores de tous les joueurs (toujours visible) */}
+      <div className="sticky top-[73px] z-10 bg-base-200/95 backdrop-blur-sm border-b border-base-300 shadow-sm">
+        <div className="container mx-auto px-4 py-2">
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            {gameState.players
+              .sort((a, b) => b.totalScore - a.totalScore)
+              .map((player) => {
+                const isCurrentPlayer = gameState.players[gameState.currentPlayerIndex].id === player.id
+                const isMe = player.id === socket.id
+                
+                return (
+                  <div
+                    key={player.id}
+                    className={`
+                      flex items-center gap-2 px-3 py-1.5 rounded-lg
+                      ${isCurrentPlayer ? 'bg-primary/20 ring-2 ring-primary' : 'bg-base-100'}
+                      ${player.abandoned ? 'opacity-50' : ''}
+                      ${isMe ? 'font-bold' : ''}
+                    `}
+                  >
+                    <span className="text-sm">
+                      {isMe ? '👤' : isCurrentPlayer ? '🎯' : '👥'}
+                    </span>
+                    <span className="text-sm font-semibold">{player.name}</span>
+                    {isMe && <span className="text-xs text-primary">(Vous)</span>}
+                    <span className="text-sm font-bold text-primary">{player.totalScore}</span>
+                    {player.abandoned && (
+                      <span className="text-xs text-error">(Abandonné)</span>
+                    )}
+                  </div>
+                )
+              })}
+          </div>
+        </div>
+      </div>
+
       {/* Contenu principal */}
       <div className="flex-1 container mx-auto p-4 space-y-6">
         {/* Dés du joueur actif (visible par tous) */}
