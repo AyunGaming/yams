@@ -3,7 +3,7 @@
  * Affiche l'interface de jeu avec les dés, les scores et les joueurs
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, ReactNode } from 'react'
 import { Socket } from 'socket.io-client'
 import { GameState, ScoreCategory } from '@/types/game'
 import Dice from './Dice'
@@ -328,11 +328,47 @@ export default function GameBoard({
                           msg.includes('reconnecté') ||
                           msg.includes('abandonné')
                         
+                        // Détecter les messages contenant des scores (ex: "a marqué X point(s)")
+                        const hasScore = msg.includes('marqué') && /\d+/.test(msg)
+                        
                         // Calculer l'opacité progressivement (plus récent = plus opaque)
                         // Le message le plus récent (idx 0) a une opacité de 100%
                         // L'opacité diminue progressivement jusqu'à 30% pour le plus ancien
                         const opacityPercent = Math.max(30, 100 - (idx * 70 / Math.max(1, messagesToShow.length - 1)))
                         const opacityStyle = { opacity: opacityPercent / 100 }
+                        
+                        // Fonction pour mettre en évidence les scores dans le message
+                        const formatMessageWithScores = (text: string): ReactNode => {
+                          if (!hasScore) return text
+                          
+                          // Pattern pour détecter "X point(s)" - capture le nombre et le mot complet "point" ou "points"
+                          const scorePattern = /(\d+)\s*(points?)/gi
+                          const parts: (string | ReactNode)[] = []
+                          let lastIndex = 0
+                          let match
+                          let keyCounter = 0
+                          
+                          while ((match = scorePattern.exec(text)) !== null) {
+                            // Ajouter le texte avant le score
+                            if (match.index > lastIndex) {
+                              parts.push(text.substring(lastIndex, match.index))
+                            }
+                            // Ajouter le score en couleur (nombre + mot complet avec le "s" si présent)
+                            parts.push(
+                              <span key={`score-${keyCounter++}`} className="font-bold text-primary">
+                                {match[1]} {match[2]}
+                              </span>
+                            )
+                            lastIndex = match.index + match[0].length
+                          }
+                          
+                          // Ajouter le reste du texte
+                          if (lastIndex < text.length) {
+                            parts.push(text.substring(lastIndex))
+                          }
+                          
+                          return parts.length > 0 ? <>{parts}</> : text
+                        }
                         
                         return (
                           <p 
@@ -344,7 +380,7 @@ export default function GameBoard({
                                 : 'text-base-content/80'
                             }`}
                           >
-                            • {msg}
+                            • {formatMessageWithScores(msg)}
                           </p>
                         )
                       })}

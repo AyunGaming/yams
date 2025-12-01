@@ -155,7 +155,7 @@ export default function UserProfile({ detailed = true, userId }: UserProfileProp
                 <div className="stat-value text-2xl text-warning">{tauxVictoire}%</div>
               </div>
               
-              <div className="stat bg-base-300 rounded-lg p-4">
+              <div className="stat stat-meilleur-score bg-base-300 rounded-lg p-4">
                 <div className="stat-title text-xs">Meilleur score</div>
                 <div className="stat-value text-2xl text-primary">{profile.meilleur_score}</div>
               </div>
@@ -171,7 +171,7 @@ export default function UserProfile({ detailed = true, userId }: UserProfileProp
                 <div className="stat-value text-xl">{profile.nombre_yams_realises}</div>
               </div>
 
-              <div className="stat bg-base-100 rounded-lg p-4">
+              <div className="stat stat-meilleure-serie bg-base-100 rounded-lg p-4">
                 <div className="stat-figure text-accent">
                   <span className="text-3xl">🔥</span>
                 </div>

@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation"
 import { useSupabase } from "@/components/Providers"
 import { useGameProtection } from "@/contexts/GameProtectionContext"
 import { tokenManager } from "@/lib/tokenManager"
+import { generateGameId } from "@/lib/gameIdGenerator"
+import { GameVariant } from "@/types/game"
+import { VARIANT_NAMES, VARIANT_DESCRIPTIONS } from "@/lib/variantLogic"
 import ThemeToggle from "./ThemeToggle"
 
 export default function Navbar() {
@@ -14,6 +17,9 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [joinCode, setJoinCode] = useState("")
   const [joinLoading, setJoinLoading] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createLoading, setCreateLoading] = useState(false)
+  const [selectedVariant, setSelectedVariant] = useState<GameVariant>('classic')
   const router = useRouter()
   const { isInActiveGame, handleAbandonBeforeNavigation } = useGameProtection()
 
@@ -82,6 +88,42 @@ export default function Navbar() {
     }
   }
 
+  const handleCreateGame = async () => {
+    if (!user) {
+      return router.push('/login')
+    }
+
+    setCreateLoading(true)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const id = generateGameId()
+
+    try {
+      const response = await fetch('/api/games', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, variant: selectedVariant }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setCreateLoading(false)
+        alert(`Erreur lors de la création de la partie: ${data.error || 'Erreur inconnue'}`)
+      } else {
+        setShowCreateModal(false)
+        await new Promise((resolve) => setTimeout(resolve, 200))
+        router.push(`/game/${id}`)
+      }
+    } catch (err) {
+      console.error('Erreur création partie:', err)
+      setCreateLoading(false)
+      alert('Erreur inattendue lors de la création de la partie')
+    }
+  }
+
   // Gestion de la navigation avec confirmation si en partie
   const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (isInActiveGame) {
@@ -122,7 +164,8 @@ export default function Navbar() {
               <button
                 type="button"
                 className="hidden md:inline-flex btn btn-sm btn-primary whitespace-nowrap"
-                onClick={() => router.push("/dashboard")}
+                onClick={() => setShowCreateModal(true)}
+                disabled={createLoading}
               >
                 ➕ Créer une partie
               </button>
@@ -253,8 +296,9 @@ export default function Navbar() {
                       type="button"
                       onClick={() => {
                         setIsMenuOpen(false)
-                        router.push("/dashboard")
+                        setShowCreateModal(true)
                       }}
+                      disabled={createLoading}
                     >
                       ➕ Créer une partie
                     </button>
@@ -299,6 +343,118 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+
+      {/* Modal de création de partie */}
+      {showCreateModal && (
+        <div className="modal modal-open">
+          <div className="modal-box max-w-2xl">
+            <h3 className="font-bold text-2xl mb-6">Choisir une variante</h3>
+            
+            <div className="space-y-4">
+              {/* Variante Classique */}
+              <div
+                onClick={() => setSelectedVariant('classic')}
+                className={`card cursor-pointer transition-all ${
+                  selectedVariant === 'classic' 
+                    ? 'bg-primary text-primary-content shadow-lg' 
+                    : 'bg-base-200 hover:bg-base-300'
+                }`}
+              >
+                <div className="card-body">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="variant"
+                      className="radio"
+                      checked={selectedVariant === 'classic'}
+                      onChange={() => setSelectedVariant('classic')}
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-lg">{VARIANT_NAMES.classic}</h4>
+                      <p className={selectedVariant === 'classic' ? 'opacity-90' : 'text-base-content/70'}>
+                        {VARIANT_DESCRIPTIONS.classic}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Variante Descendante */}
+              <div
+                onClick={() => setSelectedVariant('descending')}
+                className={`card cursor-pointer transition-all ${
+                  selectedVariant === 'descending' 
+                    ? 'bg-primary text-primary-content shadow-lg' 
+                    : 'bg-base-200 hover:bg-base-300'
+                }`}
+              >
+                <div className="card-body">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="variant"
+                      className="radio"
+                      checked={selectedVariant === 'descending'}
+                      onChange={() => setSelectedVariant('descending')}
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-lg">{VARIANT_NAMES.descending}</h4>
+                      <p className={selectedVariant === 'descending' ? 'opacity-90' : 'text-base-content/70'}>
+                        {VARIANT_DESCRIPTIONS.descending}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Variante Montante */}
+              <div
+                onClick={() => setSelectedVariant('ascending')}
+                className={`card cursor-pointer transition-all ${
+                  selectedVariant === 'ascending' 
+                    ? 'bg-primary text-primary-content shadow-lg' 
+                    : 'bg-base-200 hover:bg-base-300'
+                }`}
+              >
+                <div className="card-body">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="variant"
+                      className="radio"
+                      checked={selectedVariant === 'ascending'}
+                      onChange={() => setSelectedVariant('ascending')}
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-lg">{VARIANT_NAMES.ascending}</h4>
+                      <p className={selectedVariant === 'ascending' ? 'opacity-90' : 'text-base-content/70'}>
+                        {VARIANT_DESCRIPTIONS.ascending}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-action">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="btn"
+                disabled={createLoading}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleCreateGame}
+                className="btn btn-primary"
+                disabled={createLoading}
+              >
+                {createLoading ? 'Création...' : 'Créer la partie'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
