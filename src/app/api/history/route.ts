@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyJwtToken } from '@/lib/authServer'
+import { SimpleCache } from '@/lib/simpleCache'
 
 const COOKIE_NAME = 'yams_auth_token'
+
+// Cache process-local pour l'historique récent d'un utilisateur.
+const historyCache = new SimpleCache<any[]>(30_000) // 30 secondes
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get(COOKIE_NAME)?.value
@@ -10,6 +14,14 @@ export async function GET(request: NextRequest) {
 
   if (!authUser) {
     return NextResponse.json({ error: 'Non authentifié.' }, { status: 401 })
+  }
+
+  const userId = authUser.id
+  const cacheKey = `history_${userId}`
+  const cached = historyCache.get(cacheKey)
+
+  if (cached) {
+    return NextResponse.json({ data: cached }, { status: 200 })
   }
 
   const supabase = createAdminClient()
@@ -36,8 +48,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const userId = authUser.id
-
     const myGames = (data || [])
       .filter((game: any) => {
         if (game.owner === userId) return true
@@ -48,6 +58,8 @@ export async function GET(request: NextRequest) {
       })
       .slice(0, 10)
 
+    historyCache.set(cacheKey, myGames)
+
     return NextResponse.json({ data: myGames }, { status: 200 })
   } catch (error) {
     console.error('[API/HISTORY] Exception:', error)
@@ -57,5 +69,4 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
 

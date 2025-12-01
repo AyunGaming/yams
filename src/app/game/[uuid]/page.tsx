@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useSupabase } from '@/components/Providers'
 import { useGameSocket } from '@/hooks/useGameSocket'
@@ -31,6 +31,7 @@ export default function GamePage() {
   const router = useRouter()
   const { user, userProfile, isLoading: authLoading } = useSupabase()
   const { setIsInActiveGame, setSocket, setRoomId } = useGameProtection()
+  const userId = user?.id
 
   // Vérification de l'existence de la partie
   const [gameExists, setGameExists] = useState<boolean | null>(null)
@@ -46,6 +47,23 @@ export default function GamePage() {
       shouldConnect: gameExists === true, // Ne se connecter que si la partie existe
     }
   )
+
+  // Dérivés mémoïsés du state de jeu pour éviter de recalculer partout
+  const myPlayer = useMemo(() => {
+    if (!gameState?.players || (!userId && !socket?.id)) {
+      return null
+    }
+
+    return (
+      gameState.players.find(
+        (p) => p.userId === userId || p.id === socket?.id
+      ) ?? null
+    )
+  }, [gameState?.players, userId, socket?.id])
+
+  const isAbandoned = myPlayer?.abandoned || false
+  const isGameFinished = gameEnded || gameState?.gameStatus === 'finished'
+  const isInActiveGame = started && !isGameFinished && !isAbandoned
 
   // État local pour les animations des dés
   const [isRolling, setIsRolling] = useState(false)
@@ -76,7 +94,7 @@ export default function GamePage() {
     }
     
     console.log('[PROTECTION] Recherche joueur:', {
-      userId: user?.id,
+      userId,
       socketId: socket?.id,
       allPlayers: gameState.players.map(p => ({
         name: p.name,
@@ -85,16 +103,6 @@ export default function GamePage() {
         abandoned: p.abandoned
       }))
     })
-    
-    // Vérifier si le joueur actuel a abandonné (spectateur)
-    // Chercher par userId (plus fiable) ou par socket.id
-    const myPlayer = gameState.players.find(
-      p => p.userId === user?.id || p.id === socket?.id
-    )
-    const isAbandoned = myPlayer?.abandoned || false
-    
-    // Ne protéger que si en partie active ET que le joueur n'a pas abandonné
-    const isInActiveGame = started && !gameEnded && gameState.gameStatus !== 'finished' && !isAbandoned
     
     console.log('[PROTECTION] Résultat:', { 
       myPlayerFound: !!myPlayer,
@@ -107,7 +115,7 @@ export default function GamePage() {
     setIsInActiveGame(isInActiveGame)
     setSocket(socket)
     setRoomId(uuid)
-  }, [started, gameEnded, gameState, socket, uuid, user?.id, setIsInActiveGame, setSocket, setRoomId])
+  }, [started, gameEnded, isInActiveGame, isAbandoned, gameState, socket, uuid, userId, setIsInActiveGame, setSocket, setRoomId, myPlayer])
 
   // Protection contre la navigation accidentelle pendant une partie
   useEffect(() => {
@@ -116,20 +124,13 @@ export default function GamePage() {
       return
     }
     
-    // Vérifier si le joueur actuel a abandonné (spectateur)
-    // Chercher par userId (plus fiable) ou par socket.id
-    const myPlayer = gameState.players.find(
-      p => p.userId === user?.id || p.id === socket?.id
-    )
-    const isAbandoned = myPlayer?.abandoned || false
-    
     console.log('[PROTECTION] beforeunload check:', {
       isAbandoned,
-      myPlayerName: myPlayer?.name
+      myPlayerName: myPlayer?.name,
     }) 
     
     // Ne protéger que si la partie est en cours ET que le joueur n'a pas abandonné
-    if (!started || gameEnded || gameState.gameStatus === 'finished' || isAbandoned) {
+    if (!started || isGameFinished || isAbandoned) {
       return
     }
 
@@ -146,7 +147,7 @@ export default function GamePage() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [started, gameEnded, gameState, socket?.id, user?.id])
+  }, [started, gameEnded, isGameFinished, isAbandoned, gameState, myPlayer])
 
   // SÉCURITÉ : Vérifier l'existence de la partie AVANT tout
   useEffect(() => {

@@ -16,6 +16,9 @@ type SupabaseContextType = {
   refreshUserProfile: () => Promise<void>
 }
 
+const AUTH_ME_CACHE_KEY = 'yams_auth_me_cache'
+const AUTH_ME_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined)
 
 export function useSupabase() {
@@ -31,21 +34,64 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const readCachedAuthAndProfile = () => {
+    if (typeof window === 'undefined') return null
+
+    try {
+      const raw = window.localStorage.getItem(AUTH_ME_CACHE_KEY)
+      if (!raw) return null
+
+      const parsed = JSON.parse(raw) as {
+        user: AuthUser | null
+        profile: UserProfile | null
+        expiresAt: number
+      }
+
+      if (!parsed || typeof parsed.expiresAt !== 'number') return null
+      if (parsed.expiresAt <= Date.now()) {
+        window.localStorage.removeItem(AUTH_ME_CACHE_KEY)
+        return null
+      }
+
+      return { user: parsed.user, profile: parsed.profile }
+    } catch {
+      return null
+    }
+  }
+
+  const writeCachedAuthAndProfile = (nextUser: AuthUser | null, nextProfile: UserProfile | null) => {
+    if (typeof window === 'undefined') return
+
+    try {
+      const payload = {
+        user: nextUser,
+        profile: nextProfile,
+        expiresAt: Date.now() + AUTH_ME_CACHE_TTL_MS,
+      }
+      window.localStorage.setItem(AUTH_ME_CACHE_KEY, JSON.stringify(payload))
+    } catch {
+      // En cas d'erreur de stockage, on ignore silencieusement.
+    }
+  }
+
   const fetchAuthAndProfile = async () => {
     try {
       const res = await fetch('/api/auth/me', { credentials: 'include' })
       if (!res.ok) {
         setUser(null)
         setUserProfile(null)
+        writeCachedAuthAndProfile(null, null)
         return
       }
       const data = await res.json()
       setUser(data.user)
       setUserProfile(data.profile)
+      writeCachedAuthAndProfile(data.user, data.profile)
     } catch (error) {
       console.error('Erreur récupération auth/me:', error)
       setUser(null)
       setUserProfile(null)
+      writeCachedAuthAndProfile(null, null)
     }
   }
 
@@ -57,12 +103,23 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     let cancelled = false
     const init = async () => {
       setIsLoading(true)
+
+      // 1) On tente d'utiliser le cache local pour afficher vite quelque chose.
+      const cached = readCachedAuthAndProfile()
+      if (cached && !cancelled) {
+        setUser(cached.user)
+        setUserProfile(cached.profile)
+      }
+
+      // 2) On revalide toujours en arrière-plan pour être sûr d'avoir un état frais.
       await fetchAuthAndProfile()
+
       if (!cancelled) {
         setIsLoading(false)
       }
     }
-    init()
+
+    void init()
     return () => {
       cancelled = true
     }
