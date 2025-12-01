@@ -11,7 +11,9 @@ import { ScoreCategory } from '@/types/game'
  */
 export function handleStartGame(socket: Socket | null, roomId: string): void {
   if (!socket || !roomId) return
-  socket.emit('start_game', roomId)
+  // On lance d'abord un compte à rebours côté serveur.
+  // Le serveur démarrera ensuite la partie automatiquement à la fin du timer.
+  socket.emit('start_countdown', roomId)
 }
 
 /**

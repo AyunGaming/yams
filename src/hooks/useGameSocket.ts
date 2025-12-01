@@ -35,6 +35,7 @@ interface UseGameSocketReturn {
   roomJoined: boolean // Indique si le serveur a confirmé l'accès à la room
   onDiceRolled: (() => void) | null // Callback appelé quand les dés sont lancés
   turnTimeLeft: number | null // Temps restant pour le tour actuel en secondes
+  preGameCountdown: number | null // Compte à rebours avant le début de la partie (en secondes)
 }
 
 /**
@@ -60,6 +61,7 @@ export function useGameSocket({
   const [roomJoined, setRoomJoined] = useState(false)
   const [diceRolledTrigger, setDiceRolledTrigger] = useState(0)
   const [turnTimeLeft, setTurnTimeLeft] = useState<number | null>(null)
+  const [preGameCountdown, setPreGameCountdown] = useState<number | null>(null)
 
   useEffect(() => {
     // Attendre que l'authentification soit vérifiée
@@ -144,7 +146,15 @@ export function useGameSocket({
       })
 
       // Configure tous les listeners
-      setupBasicListeners(newSocket, setPlayers, setStarted, setIsHost, setGameState, setRoomJoined)
+      setupBasicListeners(
+        newSocket,
+        setPlayers,
+        setStarted,
+        setIsHost,
+        setGameState,
+        setRoomJoined,
+        setPreGameCountdown
+      )
       setupMessageListeners(newSocket, setSystemMessages, setGameEnded, router)
       setupErrorListeners(newSocket, socketRef, isConnectingRef, setRoomJoined, router)
       setupGameplayListeners(newSocket, setDiceRolledTrigger, setTurnTimeLeft)
@@ -176,6 +186,7 @@ export function useGameSocket({
     roomJoined,
     onDiceRolled: diceRolledTrigger > 0 ? () => setDiceRolledTrigger(0) : null,
     turnTimeLeft,
+    preGameCountdown,
   }
 }
 

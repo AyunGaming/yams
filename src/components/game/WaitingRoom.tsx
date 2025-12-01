@@ -19,6 +19,7 @@ interface WaitingRoomProps {
   onLeave: () => void
   variant?: GameVariant
   variantLoading?: boolean
+  preGameCountdown?: number | null
 }
 
 /**
@@ -33,9 +34,15 @@ export default function WaitingRoom({
   onLeave,
   variant = 'classic',
   variantLoading = false,
+  preGameCountdown = null,
 }: WaitingRoomProps) {
   const [copied, setCopied] = useState(false)
   const messagesRef = useRef<HTMLDivElement>(null)
+
+  // Références pour les sons du compte à rebours
+  const countdownStartSoundRef = useRef<HTMLAudioElement | null>(null)
+  const countdownBeepSoundRef = useRef<HTMLAudioElement | null>(null)
+  const previousCountdownRef = useRef<number | null>(null)
 
   // Scroll automatique vers le haut quand un nouveau message arrive
   useEffect(() => {
@@ -43,6 +50,53 @@ export default function WaitingRoom({
       messagesRef.current.scrollTop = 0
     }
   }, [systemMessages])
+
+  // Précharger les sons (si disponibles dans /public/sounds)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    try {
+      countdownStartSoundRef.current = new Audio('/sounds/countdown-beep.mp3')
+    } catch {
+      countdownStartSoundRef.current = null
+    }
+
+    try {
+      countdownBeepSoundRef.current = new Audio('/sounds/countdown-beep.mp3')
+    } catch {
+      countdownBeepSoundRef.current = null
+    }
+  }, [])
+
+  // Jouer les sons au début du timer et sur 3, 2, 1
+  useEffect(() => {
+    if (preGameCountdown === null) {
+      previousCountdownRef.current = null
+      return
+    }
+
+    const prev = previousCountdownRef.current
+
+    // Son de début de compte à rebours (au passage à 10)
+    if ((prev === null || prev === 0) && preGameCountdown === 10) {
+      try {
+        countdownStartSoundRef.current?.play().catch(() => {})
+      } catch {
+        // Ignorer les erreurs audio
+      }
+    }
+
+    // Son court sur 3, 2, 1
+    if (preGameCountdown === 3 || preGameCountdown === 2 || preGameCountdown === 1) {
+      try {
+        countdownBeepSoundRef.current?.play().catch(() => {})
+      } catch {
+        // Ignorer les erreurs audio
+      }
+    }
+
+    previousCountdownRef.current = preGameCountdown
+  }, [preGameCountdown])
 
   /**
    * Copie le code de la partie dans le presse-papier
@@ -138,6 +192,18 @@ export default function WaitingRoom({
                     {canStart ? 'Prêt' : 'En attente'}
                   </span>
                 </div>
+
+                {/* Compte à rebours avant le début de la partie */}
+                {preGameCountdown !== null && (
+                  <div className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/30 text-center">
+                    <p className="text-sm text-base-content/70 mb-1">
+                      La partie commence dans
+                    </p>
+                    <p className="text-3xl font-mono font-bold">
+                      {preGameCountdown}s
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -263,9 +329,14 @@ export default function WaitingRoom({
                       <button
                         onClick={onStart}
                         className="btn btn-success btn-lg w-full gap-2"
+                        disabled={preGameCountdown !== null}
                       >
                         <span>🚀</span>
-                        <span>Démarrer la partie</span>
+                        <span>
+                          {preGameCountdown !== null
+                            ? 'Compte à rebours en cours...'
+                            : 'Démarrer la partie'}
+                        </span>
                       </button>
                     ) : (
                       <div className="alert alert-warning">

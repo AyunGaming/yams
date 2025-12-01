@@ -20,7 +20,8 @@ export function setupBasicListeners(
   setStarted: Dispatch<SetStateAction<boolean>>,
   setIsHost: Dispatch<SetStateAction<boolean>>,
   setGameState: Dispatch<SetStateAction<GameState | null>>,
-  setRoomJoined: Dispatch<SetStateAction<boolean>>
+  setRoomJoined: Dispatch<SetStateAction<boolean>>,
+  setPreGameCountdown: Dispatch<SetStateAction<number | null>>
 ): void {
   // Mise à jour de la room
   socket.on('room_update', (room: { players: Player[]; started: boolean }) => {
@@ -35,12 +36,29 @@ export function setupBasicListeners(
   socket.on('game_started', (initialState: GameState) => {
     setStarted(true)
     setGameState(initialState)
+    // On cache le compte à rebours éventuel une fois la partie démarrée
+    setPreGameCountdown(null)
     setRoomJoined(true)
   })
 
   // Mise à jour du jeu
   socket.on('game_update', (updatedState: GameState) => {
     setGameState(updatedState)
+  })
+
+  // Début du compte à rebours avant la partie
+  socket.on('countdown_started', (initialSeconds: number) => {
+    setPreGameCountdown(initialSeconds)
+  })
+
+  // Tick du compte à rebours
+  socket.on('countdown_tick', (remainingSeconds: number) => {
+    setPreGameCountdown(remainingSeconds)
+  })
+
+  // Annulation du compte à rebours (ex: plus assez de joueurs)
+  socket.on('countdown_cancelled', () => {
+    setPreGameCountdown(null)
   })
 }
 

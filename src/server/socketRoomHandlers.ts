@@ -12,6 +12,10 @@ import { verifyGameExists, verifyNotAlreadyInWaitingRoom, verifyCanReconnectToGa
 import { handlePlayerReconnection } from './roomReconnectionHelpers'
 
 type Player = { id: string; name: string; userId?: string; avatar?: string }
+type RoomState = { started: boolean }
+
+// Stocke les timers de compte à rebours par room
+const countdownTimers = new Map<string, NodeJS.Timeout>()
 
 /**
  * Récupère les joueurs dans une room
@@ -37,9 +41,61 @@ function getPlayersInRoom(io: Server, roomId: string): Player[] {
 export function setupRoomHandlers(
   io: Server,
   socket: Socket,
-  roomStates: Map<string, { started: boolean }>,
+  roomStates: Map<string, RoomState>,
   supabase: SupabaseClient
 ) {
+  /**
+   * Lance réellement la partie après le compte à rebours
+   */
+  async function startGame(roomId: string) {
+    // Éviter les doubles démarrages
+    const existingState = roomStates.get(roomId)
+    if (existingState?.started) {
+      return
+    }
+
+    // Marquer que la partie a démarré
+    roomStates.set(roomId, { started: true })
+
+    // Récupérer les joueurs
+    const players = getPlayersInRoom(io, roomId)
+
+    // Récupérer la variante depuis la base de données
+    let variant: 'classic' | 'descending' | 'ascending' = 'classic'
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('variant')
+        .eq('id', roomId)
+        .single()
+
+      if (!error && data) {
+        variant = data.variant || 'classic'
+      }
+    } catch (err) {
+      console.error('[GAME] Erreur lors de la récupération de la variante:', err)
+    }
+
+    // Initialiser l'état du jeu avec la variante
+    const gameState = initializeGame(roomId, players, variant)
+
+    // Mettre à jour le status dans la base de données
+    updateGameStatus(supabase, roomId, 'in_progress')
+
+    // Émettre l'événement de démarrage
+    io.to(roomId).emit('game_started', gameState)
+
+    // Annoncer le début du premier tour
+    io.to(roomId).emit('system_message', '🎯 Début du tour 1')
+
+    // Annoncer quel joueur commence
+    const firstPlayer = gameState.players[0]
+    io.to(roomId).emit('system_message', `C'est au tour de ${firstPlayer.name}`)
+
+    // Démarrer le timer pour le premier tour
+    startTurnTimerWithCallbacks(io, roomId)
+  }
+
   /**
    * Rejoindre une room
    */
@@ -99,49 +155,61 @@ export function setupRoomHandlers(
   })
 
   /**
-   * Démarrer une partie
+   * Lancer un compte à rebours avant le début de la partie
    */
-  socket.on('start_game', async (roomId: string) => {
-    // Marquer que la partie a démarré
-    roomStates.set(roomId, { started: true })
+  socket.on('start_countdown', (roomId: string) => {
+    console.log('[ROOM] start_countdown reçu pour room', roomId, 'socket', socket.id)
 
-    // Récupérer les joueurs
-    const players = getPlayersInRoom(io, roomId)
+    const roomState = roomStates.get(roomId)
 
-    // Récupérer la variante depuis la base de données
-    let variant: 'classic' | 'descending' | 'ascending' = 'classic'
-    try {
-      const { data, error } = await supabase
-        .from('games')
-        .select('variant')
-        .eq('id', roomId)
-        .single()
-
-      if (!error && data) {
-        variant = data.variant || 'classic'
-      }
-    } catch (err) {
-      console.error('[GAME] Erreur lors de la récupération de la variante:', err)
+    // Si la partie a déjà démarré ou qu'un compte à rebours est en cours, ne rien faire
+    if (roomState?.started || countdownTimers.has(roomId)) {
+      return
     }
 
-    // Initialiser l'état du jeu avec la variante
-    const gameState = initializeGame(roomId, players, variant)
+    const players = getPlayersInRoom(io, roomId)
+    console.log('[ROOM] Joueurs dans la room pour le compte à rebours:', players.length)
 
-    // Mettre à jour le status dans la base de données
-    updateGameStatus(supabase, roomId, 'in_progress')
+    // Ne démarrer le compte à rebours que s'il y a au moins 2 joueurs
+    if (players.length < 2) {
+      console.log('[ROOM] Pas assez de joueurs pour démarrer le compte à rebours')
+      socket.emit('system_message', 'Au moins 2 joueurs sont nécessaires pour démarrer la partie.')
+      return
+    }
 
-    // Émettre l'événement de démarrage
-    io.to(roomId).emit('game_started', gameState)
-    
-    // Annoncer le début du premier tour
-    io.to(roomId).emit('system_message', '🎯 Début du tour 1')
-    
-    // Annoncer quel joueur commence
-    const firstPlayer = gameState.players[0]
-    io.to(roomId).emit('system_message', `C'est au tour de ${firstPlayer.name}`)
-    
-    // Démarrer le timer pour le premier tour
-    startTurnTimerWithCallbacks(io, roomId)
+    const TOTAL_SECONDS = 10
+    let remaining = TOTAL_SECONDS
+
+    // Notifier tout le monde du début du compte à rebours
+    io.to(roomId).emit('countdown_started', remaining)
+
+    const interval = setInterval(async () => {
+      remaining -= 1
+
+      // Si plus assez de joueurs pendant le compte à rebours, l'annuler
+      const currentPlayers = getPlayersInRoom(io, roomId)
+      if (currentPlayers.length < 2) {
+        clearInterval(interval)
+        countdownTimers.delete(roomId)
+        io.to(roomId).emit('countdown_cancelled')
+        io.to(roomId).emit('system_message', 'Compte à rebours annulé (pas assez de joueurs).')
+        return
+      }
+
+      if (remaining > 0) {
+        io.to(roomId).emit('countdown_tick', remaining)
+        return
+      }
+
+      // Fin du compte à rebours
+      clearInterval(interval)
+      countdownTimers.delete(roomId)
+
+      // Lance la partie
+      await startGame(roomId)
+    }, 1000)
+
+    countdownTimers.set(roomId, interval)
   })
 
   /**
@@ -163,6 +231,17 @@ export function setupRoomHandlers(
     })
 
     io.to(roomId).emit('system_message', `${playerName} a quitté la partie`)
+
+    // Annuler un éventuel compte à rebours si plus assez de joueurs
+    if (players.length < 2) {
+      const countdown = countdownTimers.get(roomId)
+      if (countdown) {
+        clearInterval(countdown)
+        countdownTimers.delete(roomId)
+        io.to(roomId).emit('countdown_cancelled')
+        io.to(roomId).emit('system_message', 'Compte à rebours annulé (pas assez de joueurs).')
+      }
+    }
 
     // Si c'était l'hôte et qu'il reste des joueurs, notifier le transfert
     if (players.length > 0) {

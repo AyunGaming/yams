@@ -38,7 +38,19 @@ export default function GamePage() {
   const isRedirectingRef = useRef(false)
 
   // État du jeu via le hook personnalisé
-  const { socket, players, started, isHost, gameState, gameEnded, systemMessages, roomJoined, onDiceRolled, turnTimeLeft } = useGameSocket(
+  const {
+    socket,
+    players,
+    started,
+    isHost,
+    gameState,
+    gameEnded,
+    systemMessages,
+    roomJoined,
+    onDiceRolled,
+    turnTimeLeft,
+    preGameCountdown,
+  } = useGameSocket(
     {
       uuid,
       user,
@@ -51,7 +63,7 @@ export default function GamePage() {
   // Dérivés mémoïsés du state de jeu pour éviter de recalculer partout
   const myPlayer = useMemo(() => {
     if (!gameState?.players || (!userId && !socket?.id)) {
-      return null
+      return null 
     }
 
     return (
@@ -73,6 +85,9 @@ export default function GamePage() {
   const [variant, setVariant] = useState<GameVariant>('classic')
   const [variantLoading, setVariantLoading] = useState(true)
   const [ownerId, setOwnerId] = useState<string | null>(null)
+
+  // Référence pour éviter de rejouer le son de début de partie plusieurs fois
+  const hasPlayedGameStartSoundRef = useRef(false)
 
   // Référence pour savoir si on peut quitter sans confirmation
   const canLeaveWithoutWarning = useRef(false)
@@ -206,6 +221,15 @@ export default function GamePage() {
     }
   }, [onDiceRolled])
 
+  // Jouer un son au lancement de la partie (après le compte à rebours)
+  useEffect(() => {
+    if (!started || hasPlayedGameStartSoundRef.current) {
+      return
+    }
+
+    hasPlayedGameStartSoundRef.current = true
+  }, [started])
+
   /**
    * Gestionnaires d'événements
    */
@@ -261,6 +285,7 @@ export default function GamePage() {
         onLeave={onLeave}
         variant={variant}
         variantLoading={variantLoading}
+        preGameCountdown={preGameCountdown}
       />
     )
   }
