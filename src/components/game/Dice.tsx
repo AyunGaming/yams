@@ -38,14 +38,47 @@ interface DieComponentProps {
 
 function DieComponent({ die, index, onToggleLock, canInteract, isRolling }: DieComponentProps) {
   const [isAnimating, setIsAnimating] = useState(false)
+  const [displayValue, setDisplayValue] = useState(die.value)
 
   useEffect(() => {
-    if (isRolling) {
-      setIsAnimating(true)
-      const timer = setTimeout(() => setIsAnimating(false), 600)
-      return () => clearTimeout(timer)
+    // Quand on ne lance pas les dés, on s'assure d'afficher la vraie valeur
+    if (!isRolling) {
+      setDisplayValue(die.value)
+      return
     }
-  }, [isRolling])
+  }, [isRolling, die.value])
+
+  useEffect(() => {
+    if (!isRolling) {
+      setIsAnimating(false)
+      return
+    }
+
+    setIsAnimating(true)
+
+    // Pendant l'animation, faire défiler des valeurs aléatoires
+    const interval = setInterval(() => {
+      setDisplayValue((prev) => {
+        // Générer une valeur entre 1 et 6, différente si possible
+        let next = Math.floor(Math.random() * 6) + 1
+        if (next === prev) {
+          next = ((next % 6) || 6)
+        }
+        return next
+      })
+    }, 80)
+
+    // Arrêter l'animation après 600ms et afficher la vraie valeur
+    const timeout = setTimeout(() => {
+      setIsAnimating(false)
+      setDisplayValue(die.value)
+    }, 600)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
+  }, [isRolling, die.value])
 
   return (
     <button
@@ -72,7 +105,7 @@ function DieComponent({ die, index, onToggleLock, canInteract, isRolling }: DieC
           🔒
         </div>
       )}
-      <DieDotsDisplay value={die.value} />
+      <DieDotsDisplay value={displayValue} />
       
       <style jsx>{`
         @keyframes roll {
