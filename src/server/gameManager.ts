@@ -80,9 +80,20 @@ export function initializeGame(
 /**
  * Lance les dés (sauf ceux qui sont verrouillés)
  */
-export function rollDice(roomId: string): GameState | null {
+export function rollDice(roomId: string, playerId: string): GameState | null {
   const game = getGameState(roomId)
   if (!game) return null
+  
+  // Vérifier que c'est le tour du joueur
+  const currentPlayer = game.players[game.currentPlayerIndex]
+  if (currentPlayer.id !== playerId) {
+    return game
+  }
+  
+  // Vérifier que le joueur n'a pas abandonné
+  if (currentPlayer.abandoned) {
+    return game
+  }
   
   if (game.rollsLeft <= 0) {
     return game
@@ -98,9 +109,20 @@ export function rollDice(roomId: string): GameState | null {
 /**
  * Verrouille/déverrouille un dé
  */
-export function toggleDieLock(roomId: string, dieIndex: number): GameState | null {
+export function toggleDieLock(roomId: string, playerId: string, dieIndex: number): GameState | null {
   const game = getGameState(roomId)
   if (!game || dieIndex < 0 || dieIndex >= 5) return null
+  
+  // Vérifier que c'est le tour du joueur
+  const currentPlayer = game.players[game.currentPlayerIndex]
+  if (currentPlayer.id !== playerId) {
+    return game
+  }
+  
+  // Vérifier que le joueur n'a pas abandonné
+  if (currentPlayer.abandoned) {
+    return game
+  }
   
   game.dice[dieIndex].locked = !game.dice[dieIndex].locked
   

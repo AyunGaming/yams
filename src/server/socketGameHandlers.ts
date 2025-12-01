@@ -25,7 +25,8 @@ export function setupGameHandlers(
    * Lancer les dés
    */
   socket.on('roll_dice', (roomId: string) => {
-    const gameState = rollDice(roomId)
+    const playerId = socket.id
+    const gameState = rollDice(roomId, playerId)
     if (gameState) {
       // Signaler à tous les joueurs qu'un lancer a eu lieu (pour l'animation)
       io.to(roomId).emit('dice_rolled')
@@ -40,7 +41,8 @@ export function setupGameHandlers(
   socket.on(
     'toggle_die_lock',
     ({ roomId, dieIndex }: { roomId: string; dieIndex: number }) => {
-      const gameState = toggleDieLock(roomId, dieIndex)
+      const playerId = socket.id
+      const gameState = toggleDieLock(roomId, playerId, dieIndex)
       if (gameState) {
         io.to(roomId).emit('game_update', gameState)
       }
