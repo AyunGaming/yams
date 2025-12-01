@@ -113,7 +113,7 @@ export default function GameBoard({
               <h1 className="text-lg md:text-xl font-bold">
                 🎲 Yams - Tour {gameState.turnNumber}/13
               </h1>
-              <p className="text-xs text-base-content/70">Partie #{uuid}</p>
+              <p className="text-xs text-base-content/70 selectable-text">Partie #{uuid}</p>
             </div>
 
             {/* Info joueur actif */}

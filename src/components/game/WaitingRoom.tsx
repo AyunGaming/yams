@@ -132,7 +132,7 @@ export default function WaitingRoom({
                 Code de la partie
               </h2>
               <div className="bg-base-100 px-6 py-4 rounded-lg shadow-inner">
-                <code className="text-3xl md:text-4xl font-mono font-bold tracking-wider">
+                <code className="text-3xl md:text-4xl font-mono font-bold tracking-wider selectable-text">
                   {uuid}
                 </code>
               </div>
