@@ -1,20 +1,23 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { tokenManager } from '@/lib/tokenManager'
 import { useSupabase } from '@/components/Providers'
 
 export default function LoginPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { refreshUserProfile } = useSupabase()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [form, setForm] = useState({ email: '', password: '' })
 
   useEffect(() => {
-    const confirm = searchParams.get('confirm')
+    if (typeof window === 'undefined') return
+
+    const params = new URLSearchParams(window.location.search)
+    const confirm = params.get('confirm')
+
     if (confirm === 'success') {
       setMessage('✅ Email confirmé. Tu peux maintenant te connecter.')
     } else if (confirm === 'error') {
@@ -22,7 +25,7 @@ export default function LoginPage() {
         '❌ Erreur lors de la confirmation de ton email. Le lien est peut-être expiré.'
       )
     }
-  }, [searchParams])
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
