@@ -54,6 +54,7 @@ export default function GamePage() {
   // État pour la variante de la partie
   const [variant, setVariant] = useState<GameVariant>('classic')
   const [variantLoading, setVariantLoading] = useState(true)
+  const [ownerId, setOwnerId] = useState<string | null>(null)
 
   // Référence pour savoir si on peut quitter sans confirmation
   const canLeaveWithoutWarning = useRef(false)
@@ -169,6 +170,7 @@ export default function GamePage() {
         // La partie existe, on peut continuer
         setGameExists(true)
         setVariant(json.data.variant || 'classic')
+        setOwnerId(json.data.owner || null)
         setVariantLoading(false)
       } catch (err) {
         console.error('Erreur lors de la vérification de la partie:', err)
@@ -274,7 +276,15 @@ export default function GamePage() {
 
   // Écran de fin de partie
   if (gameEnded || gameState.gameStatus === 'finished') {
-    return <GameOver gameState={gameState} mySocketId={socket?.id} socket={socket} />
+    const amIHost = !!ownerId && !!user?.id && ownerId === user.id
+    return (
+      <GameOver
+        gameState={gameState}
+        mySocketId={socket?.id}
+        socket={socket}
+        amIHost={amIHost}
+      />
+    )
   }
 
   // Plateau de jeu

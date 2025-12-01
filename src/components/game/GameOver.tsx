@@ -16,16 +16,14 @@ interface GameOverProps {
   gameState: GameState
   mySocketId: string | undefined
   socket: Socket | null
+  amIHost: boolean
 }
 
 /**
  * Composant d'écran de fin de partie
  */
-export default function GameOver({ gameState, mySocketId, socket }: GameOverProps) {
+export default function GameOver({ gameState, mySocketId, socket, amIHost }: GameOverProps) {
   const { userProfile, refreshUserProfile } = useSupabase()
-
-  // Déterminer si je suis l'hôte
-  const amIHost = gameState.players[0]?.id === mySocketId
 
   // Trier les joueurs pour trouver le gagnant
   const sortedPlayers = [...gameState.players].sort((a, b) => {

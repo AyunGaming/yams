@@ -21,7 +21,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
   try {
     const { data, error } = await supabase
       .from('games')
-      .select('id, status, variant')
+      .select('id, status, variant, owner')
       .eq('id', id)
       .maybeSingle()
 
