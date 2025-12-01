@@ -59,6 +59,29 @@ export default function Navbar() {
     }
   }
 
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text && text.trim()) {
+        setJoinCode(text.trim())
+      }
+    } catch (error) {
+      console.error('Erreur lors de la lecture du presse-papier:', error)
+      // Fallback: essayer de coller depuis un input temporaire
+      const tempInput = document.createElement('input')
+      tempInput.style.position = 'fixed'
+      tempInput.style.opacity = '0'
+      document.body.appendChild(tempInput)
+      tempInput.focus()
+      document.execCommand('paste')
+      const pastedText = tempInput.value
+      document.body.removeChild(tempInput)
+      if (pastedText && pastedText.trim()) {
+        setJoinCode(pastedText.trim())
+      }
+    }
+  }
+
   // Gestion de la navigation avec confirmation si en partie
   const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (isInActiveGame) {
@@ -106,6 +129,15 @@ export default function Navbar() {
               {/* Séparateur visuel entre création et jointure */}
               <div className="hidden md:block h-6 w-px bg-neutral/40 dark:bg-neutral/60" />
               <div className="flex items-center gap-2 w-full max-w-xs">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  onClick={handlePaste}
+                  disabled={joinLoading}
+                  title="Coller le code de la partie"
+                >
+                  📋
+                </button>
                 <input
                   type="text"
                   placeholder="Code de la partie"

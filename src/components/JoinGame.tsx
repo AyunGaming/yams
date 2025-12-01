@@ -31,8 +31,40 @@ export default function JoinGame() {
     }
   }
 
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text && text.trim()) {
+        setGameId(text.trim())
+      }
+    } catch (error) {
+      console.error('Erreur lors de la lecture du presse-papier:', error)
+      // Fallback: essayer de coller depuis un input temporaire
+      const tempInput = document.createElement('input')
+      tempInput.style.position = 'fixed'
+      tempInput.style.opacity = '0'
+      document.body.appendChild(tempInput)
+      tempInput.focus()
+      document.execCommand('paste')
+      const pastedText = tempInput.value
+      document.body.removeChild(tempInput)
+      if (pastedText && pastedText.trim()) {
+        setGameId(pastedText.trim())
+      }
+    }
+  }
+
   return (
     <div className="flex gap-2 items-center">
+      <button
+        type="button"
+        className="btn btn-ghost"
+        onClick={handlePaste}
+        disabled={loading}
+        title="Coller le code de la partie"
+      >
+        📋
+      </button>
       <input
         type="text"
         placeholder="Entrer le code de la partie"
