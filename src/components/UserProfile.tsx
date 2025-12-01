@@ -36,7 +36,7 @@ export default function UserProfile({ detailed = true, userId }: UserProfileProp
         return
       }
 
-      if (!targetUserId) {
+      if (!targetUserId || !supabase) {
         setLoading(false)
         return
       }
@@ -83,8 +83,37 @@ export default function UserProfile({ detailed = true, userId }: UserProfileProp
             console.log('✅ Stats récupérées depuis la table users')
           }
         } else if (data) {
-          setStats(data as UserStats)
-          console.log('✅ Stats récupérées depuis leaderboard')
+          // Vérifier si xp et level sont présents (la vue leaderboard peut ne pas les avoir)
+          if (data.xp === undefined || data.level === undefined) {
+            console.log('⚠️ Leaderboard ne contient pas xp/level, récupération depuis users...')
+            // Récupérer depuis users pour avoir xp et level
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', targetUserId)
+              .single()
+            
+            if (userError) {
+              console.error('❌ Erreur lors de la récupération depuis users:', userError)
+              setStats(data as UserStats)
+            } else if (userData) {
+              // Fusionner les données : leaderboard pour taux_victoire, users pour xp/level
+              const mergedStats = {
+                ...data,
+                ...userData,
+                taux_victoire: data.taux_victoire || (userData.parties_jouees > 0 
+                  ? Math.round((userData.parties_gagnees / userData.parties_jouees) * 100)
+                  : 0)
+              }
+              setStats(mergedStats as UserStats)
+              console.log('✅ Stats fusionnées (leaderboard + users)')
+            } else {
+              setStats(data as UserStats)
+            }
+          } else {
+            setStats(data as UserStats)
+            console.log('✅ Stats récupérées depuis leaderboard')
+          }
         } else {
           // Pas de données dans leaderboard (probablement parties_jouees = 0)
           console.log('ℹ️ Pas de données dans leaderboard, utilisation du profil de base')

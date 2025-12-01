@@ -20,23 +20,18 @@ interface XPBarProps {
  * Composant de barre d'XP
  */
 export default function XPBar({ currentXp, currentLevel, size = 'md' }: XPBarProps) {
-  // xpForLevel(n) retourne l'XP total nécessaire pour atteindre le level n
-  // La fonction levelFromXp vérifie: xpForLevel(level + 1) > xp pour déterminer le level
-  // Donc:
-  // - Level 1: 0 <= xp < xpForLevel(2)
-  // - Level 2: xpForLevel(2) <= xp < xpForLevel(3)
-  // - Level n: xpForLevel(n) <= xp < xpForLevel(n + 1)
+  // xpForLevel(n) retourne l'XP nécessaire pour atteindre le level n
+  // L'XP repart de 0 à chaque level, donc l'XP nécessaire pour passer au level suivant
+  // est directement xpForLevel(level + 1)
+  
+  // XP nécessaire pour passer au level suivant (directement la valeur de la formule)
+  const xpNeededForNext = xpForLevel(currentLevel + 1)
   
   // XP minimum pour être au level actuel (début du level)
+  // C'est la somme de tous les XP nécessaires pour les levels précédents
   const xpMinForCurrentLevel = currentLevel === 1 ? 0 : xpForLevel(currentLevel)
   
-  // XP minimum pour être au level suivant (fin du level actuel)
-  const xpMinForNextLevel = xpForLevel(currentLevel + 1)
-  
-  // XP nécessaire pour passer du level actuel au prochain level
-  const xpNeededForNext = xpMinForNextLevel - xpMinForCurrentLevel
-  
-  // XP gagné depuis le début du level actuel
+  // XP gagné depuis le début du level actuel (repart de 0 à chaque level)
   const xpInCurrentLevel = Math.max(0, currentXp - xpMinForCurrentLevel)
   
   // Pourcentage de progression vers le prochain level
