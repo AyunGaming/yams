@@ -12,6 +12,26 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  // next-themes utilise 'theme' comme clé par défaut
+                  const stored = localStorage.getItem('theme');
+                  const theme = stored && (stored === 'yams' || stored === 'yams-dark') 
+                    ? stored 
+                    : 'yams';
+                  document.documentElement.setAttribute('data-theme', theme);
+                } catch (e) {
+                  document.documentElement.setAttribute('data-theme', 'yams');
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-base-100 text-base-content">
         <Providers>
           <GameProtectionProvider>

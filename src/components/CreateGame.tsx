@@ -6,6 +6,7 @@ import { generateGameId } from '@/lib/gameIdGenerator'
 import { useState } from 'react'
 import { GameVariant } from '@/types/game'
 import { VARIANT_NAMES, VARIANT_DESCRIPTIONS } from '@/lib/variantLogic'
+import PlusIcon from './icons/PlusIcon'
 
 export default function CreateGame() {
   const router = useRouter()
@@ -79,7 +80,8 @@ export default function CreateGame() {
         onClick={openModal}
         className="btn btn-primary"
       >
-        ➕ Nouvelle partie
+        <PlusIcon className="w-4 h-4" />
+        <span>Nouvelle partie</span>
       </button>
 
       {showModal && (

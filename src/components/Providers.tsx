@@ -127,7 +127,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <SupabaseContext.Provider value={{ user, userProfile, isLoading, refreshUserProfile }}>
-      <ThemeProvider attribute="data-theme" defaultTheme="dark">
+      <ThemeProvider 
+        attribute="data-theme" 
+        defaultTheme="yams" 
+        themes={["yams", "yams-dark"]}
+        enableSystem={false}
+        enableColorScheme={false}
+      >
         {children}
       </ThemeProvider>
     </SupabaseContext.Provider>
