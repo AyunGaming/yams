@@ -70,7 +70,7 @@ export default function GameHistory() {
 
   if (loading) {
     return (
-      <div className="card bg-base-200">
+      <div className="card bg-base-200/95 backdrop-blur-md border border-base-300">
         <div className="card-body">
           <h2 className="card-title">📜 Historique des parties</h2>
           <div className="flex justify-center py-8">
@@ -82,7 +82,7 @@ export default function GameHistory() {
   }
 
   return (
-    <div className="card bg-base-200">
+    <div className="card bg-base-200/95 backdrop-blur-md border border-base-300">
       <div className="card-body">
         <div className="flex justify-between items-center mb-2">
           <h2 className="card-title">📜 Historique des parties</h2>
@@ -127,7 +127,12 @@ export default function GameHistory() {
                   const variantName = VARIANT_NAMES[variant]
                   
                   return (
-                    <tr key={g.id} className={iAbandoned ? 'opacity-60' : ''}>
+                    <tr 
+                      key={g.id} 
+                      className={`transition-colors hover:bg-base-300/50 ${
+                        iAbandoned ? 'opacity-60 abandoned-row' : ''
+                      }`}
+                    >
                       <td>
                         {new Date(g.created_at).toLocaleDateString('fr-FR', {
                           year: 'numeric',

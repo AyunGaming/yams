@@ -48,6 +48,7 @@
   --color-secondary: hsl(var(--s));
   --color-accent: hsl(var(--a));
   --color-neutral: hsl(var(--n));
+  --color-secondary-content: #1f2937;
 }
 
 [data-theme="yams-dark"] {
@@ -92,6 +93,7 @@
   --color-secondary: hsl(var(--s));
   --color-accent: hsl(var(--a));
   --color-neutral: hsl(var(--n));
+  --color-secondary-content: #1f2937;
 }
 
 /* Styles de base */
@@ -134,12 +136,6 @@ h1,
   color: hsl(var(--bc)) !important;
   background: none !important;
   -webkit-text-fill-color: hsl(var(--bc)) !important;
-}
-
-/* SVG dé à côté du logo Yams */
-.navbar-dice-icon {
-  display: inline-block;
-  flex-shrink: 0;
 }
 
 /* Zones qui doivent rester sélectionnables */
@@ -220,6 +216,28 @@ textarea {
 .select:focus {
   @apply ring-2 ring-primary ring-offset-2;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Table hover effect */
+table tbody tr:hover {
+  background-color: hsl(var(--b3) / 0.5) !important;
+}
+
+/* Ligne barrée pour les parties abandonnées */
+table tbody tr.abandoned-row {
+  position: relative;
+}
+
+table tbody tr.abandoned-row::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: hsl(var(--bc) / 0.4);
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 /* Scrollbar personnalisée */
