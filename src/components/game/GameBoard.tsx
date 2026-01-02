@@ -175,7 +175,7 @@ export default function GameBoard({
       <div className="sticky top-[73px] z-10 bg-base-200/95 backdrop-blur-sm border-b border-base-300 shadow-sm">
         <div className="container mx-auto px-4 py-2">
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            {gameState.players
+            {[...gameState.players]
               .sort((a, b) => b.totalScore - a.totalScore)
               .map((player) => {
                 const isCurrentPlayer = gameState.players[gameState.currentPlayerIndex].id === player.id
