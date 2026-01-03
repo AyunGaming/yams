@@ -233,22 +233,6 @@ table tbody tr:hover {
   background-color: hsl(var(--b3) / 0.5) !important;
 }
 
-/* Ligne barrée pour les parties abandonnées */
-table tbody tr.abandoned-row {
-  position: relative;
-}
-
-table tbody tr.abandoned-row::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background-color: hsl(var(--bc) / 0.4);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
 
 /* Scrollbar personnalisée */
 ::-webkit-scrollbar {
