@@ -259,7 +259,7 @@ export default function Navbar() {
                   tabIndex={0}
                   className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-300"
                 >
-                  <li>
+                  <li className="menu-title border-b border-base-300 pb-2 mb-2">
                     <span className="font-semibold">{userProfile?.username ?? "Utilisateur"}</span>
                   </li>
                   <li>

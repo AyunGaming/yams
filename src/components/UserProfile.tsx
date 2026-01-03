@@ -140,22 +140,22 @@ export default function UserProfile({ detailed = true, userId }: UserProfileProp
           <>
             {/* Stats principales */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div className="stat bg-base-100 rounded-lg p-4">
+              <div className="stat bg-base-100 p-4">
                 <div className="stat-title text-xs">Parties jouées</div>
                 <div className="stat-value text-2xl">{profile.parties_jouees}</div>
               </div>
               
-              <div className="stat bg-base-100 rounded-lg p-4">
+              <div className="stat bg-base-100 p-4">
                 <div className="stat-title text-xs">Victoires</div>
                 <div className="stat-value text-2xl text-success">{profile.parties_gagnees}</div>
               </div>
               
-              <div className="stat bg-base-100 rounded-lg p-4">
+              <div className="stat bg-base-100 p-4">
                 <div className="stat-title text-xs">Taux de victoire</div>
                 <div className="stat-value text-2xl text-warning">{tauxVictoire}%</div>
               </div>
               
-              <div className="stat stat-meilleur-score bg-base-100 rounded-lg p-4">
+              <div className="stat stat-meilleur-score bg-base-100 p-4">
                 <div className="stat-title text-xs">Meilleur score</div>
                 <div className="stat-value text-2xl text-primary">{profile.meilleur_score}</div>
               </div>
@@ -163,7 +163,7 @@ export default function UserProfile({ detailed = true, userId }: UserProfileProp
 
             {/* Stats secondaires */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="stat bg-base-100 rounded-lg p-4">
+              <div className="stat bg-base-100 p-4">
                 <div className="stat-figure text-secondary">
                   <span className="text-3xl">🎲</span>
                 </div>

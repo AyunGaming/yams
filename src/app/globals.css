@@ -233,6 +233,9 @@ table tbody tr:hover {
   background-color: hsl(var(--b3) / 0.5) !important;
 }
 
+.menu-title {
+  color: #F9FAFC !important;
+}
 
 /* Scrollbar personnalisée */
 ::-webkit-scrollbar {
