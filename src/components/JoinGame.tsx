@@ -55,10 +55,10 @@ export default function JoinGame() {
   }
 
   return (
-    <div className="flex gap-2 items-center">
+    <div className="flex items-center gap-0 w-full max-w-md">
       <button
         type="button"
-        className="btn btn-ghost"
+        className="input input-bordered rounded-r-none w-10 px-0 flex items-center justify-center cursor-pointer hover:bg-base-200 transition-colors input-no-focus"
         onClick={handlePaste}
         disabled={loading}
         title="Coller le code de la partie"
@@ -68,7 +68,7 @@ export default function JoinGame() {
       <input
         type="text"
         placeholder="Entrer le code de la partie"
-        className="input input-bordered w-full max-w-xs"
+        className="input input-bordered flex-1 rounded-none border-r-0 input-no-focus"
         value={gameId}
         onChange={(e) => setGameId(e.target.value)}
         onKeyPress={handleKeyPress}
@@ -76,7 +76,7 @@ export default function JoinGame() {
       />
       <button
         onClick={handleJoin}
-        className="btn btn-secondary"
+        className="btn btn-secondary whitespace-nowrap rounded-l-none"
         disabled={loading || !gameId.trim()}
       >
         {loading ? 'Connexion...' : '🚪 Rejoindre'}

@@ -19,7 +19,7 @@ export default function HomePage() {
             <svg 
               className="h-[1em] w-[1em]" 
               viewBox="0 0 32 32" 
-              fill="#F8EC81" 
+              fill="var(--dice-color)" 
               xmlns="http://www.w3.org/2000/svg"
             >
               <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
@@ -112,7 +112,7 @@ export default function HomePage() {
       </section>
 
       {/* How to Play Section */}
-      <section className="py-20 px-4 bg-gradient-to-b from-base-200 to-base-100">
+      <section className="py-20 px-4 bg-base-200/95 backdrop-blur-md border border-base-300 rounded-lg">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-4xl md:text-5xl font-display font-bold text-center mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             Comment jouer ?
@@ -121,7 +121,7 @@ export default function HomePage() {
             Simple, rapide et amusant
           </p>
           <div className="space-y-6">
-            <div className="card bg-base-100 shadow-lg hover:shadow-xl transition-all border-l-4 border-l-primary">
+            <div className="card bg-base-200 shadow-lg hover:shadow-xl transition-all border-l-4 border-l-primary">
               <div className="card-body">
                 <div className="flex gap-4 items-start">
                   <div className="badge badge-primary badge-lg text-xl font-bold min-w-[3.5rem] h-14 flex items-center justify-center shadow-lg">
@@ -137,7 +137,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-lg hover:shadow-xl transition-all border-l-4 border-l-secondary">
+            <div className="card bg-base-200 shadow-lg hover:shadow-xl transition-all border-l-4 border-l-secondary">
               <div className="card-body">
                 <div className="flex gap-4 items-start">
                   <div className="badge badge-secondary badge-lg text-xl font-bold min-w-[3.5rem] h-14 flex items-center justify-center shadow-lg">
@@ -153,7 +153,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-lg hover:shadow-xl transition-all border-l-4 border-l-accent">
+            <div className="card bg-base-200 shadow-lg hover:shadow-xl transition-all border-l-4 border-l-accent">
               <div className="card-body">
                 <div className="flex gap-4 items-start">
                   <div className="badge badge-accent badge-lg text-xl font-bold min-w-[3.5rem] h-14 flex items-center justify-center shadow-lg">
@@ -169,7 +169,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-lg hover:shadow-xl transition-all border-l-4 border-l-primary">
+            <div className="card bg-base-200 shadow-lg hover:shadow-xl transition-all border-l-4 border-l-primary">
               <div className="card-body">
                 <div className="flex gap-4 items-start">
                   <div className="badge badge-primary badge-lg text-xl font-bold min-w-[3.5rem] h-14 flex items-center justify-center shadow-lg">

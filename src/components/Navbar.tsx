@@ -157,7 +157,7 @@ export default function Navbar() {
           <svg 
             className="w-8 h-8 navbar-dice-icon" 
             viewBox="0 0 32 32" 
-            fill="#F8EC81" 
+            fill="var(--dice-color)" 
             xmlns="http://www.w3.org/2000/svg"
           >
             <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
@@ -186,10 +186,10 @@ export default function Navbar() {
               </button>
               {/* Séparateur visuel entre création et jointure */}
               <div className="hidden md:block h-6 w-px bg-neutral/40 dark:bg-neutral/60" />
-              <div className="flex items-center gap-2 w-full max-w-xs">
+              <div className="flex items-center gap-0 w-full max-w-xs">
                 <button
                   type="button"
-                  className="btn btn-sm btn-ghost"
+                  className="input input-sm input-bordered rounded-r-none w-10 px-0 flex items-center justify-center cursor-pointer hover:bg-base-200 transition-colors input-no-focus"
                   onClick={handlePaste}
                   disabled={joinLoading}
                   title="Coller le code de la partie"
@@ -199,7 +199,7 @@ export default function Navbar() {
                 <input
                   type="text"
                   placeholder="Code de la partie"
-                  className="input input-sm input-bordered flex-1"
+                  className="input input-sm input-bordered flex-1 rounded-none border-r-0 input-no-focus"
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value)}
                   onKeyDown={handleJoinKeyDown}
@@ -207,7 +207,7 @@ export default function Navbar() {
                 />
                 <button
                   type="button"
-                  className="btn btn-sm btn-secondary whitespace-nowrap"
+                  className="btn btn-sm btn-secondary whitespace-nowrap rounded-l-none"
                   onClick={handleJoinGame}
                   disabled={joinLoading || !joinCode.trim()}
                 >

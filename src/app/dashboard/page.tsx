@@ -51,7 +51,7 @@ export default function DashboardPage() {
           <svg 
             className="h-[1em] w-[1em]" 
             viewBox="0 0 32 32" 
-            fill="#F8EC81" 
+            fill="var(--dice-color)" 
             xmlns="http://www.w3.org/2000/svg"
           >
             <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
