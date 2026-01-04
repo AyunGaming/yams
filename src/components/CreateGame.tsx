@@ -86,7 +86,7 @@ export default function CreateGame() {
 
       {showModal && (
         <div className="modal modal-open">
-          <div className="modal-box max-w-2xl">
+          <div className="modal-box card-bordered max-w-2xl">
             <h3 className="font-bold text-2xl mb-6">Choisir une variante</h3>
             
             <div className="space-y-4">

@@ -364,14 +364,14 @@ export default function Navbar() {
       {/* Modal de création de partie - rendue via portail pour s'afficher au centre de la page */}
       {showCreateModal && typeof window !== 'undefined' && createPortal(
         <div className="modal modal-open">
-          <div className="modal-box max-w-2xl">
+          <div className="modal-box card-bordered max-w-2xl">
             <h3 className="font-bold text-2xl mb-6">Choisir une variante</h3>
             
             <div className="space-y-4">
               {/* Variante Classique */}
               <div
                 onClick={() => setSelectedVariant('classic')}
-                className={`card cursor-pointer transition-all ${
+                className={`card glass cursor-pointer transition-all ${
                   selectedVariant === 'classic' 
                     ? 'bg-primary text-primary-content shadow-lg' 
                     : 'bg-base-200 hover:bg-base-300'
@@ -399,7 +399,7 @@ export default function Navbar() {
               {/* Variante Descendante */}
               <div
                 onClick={() => setSelectedVariant('descending')}
-                className={`card cursor-pointer transition-all ${
+                className={`card glass cursor-pointer transition-all ${
                   selectedVariant === 'descending' 
                     ? 'bg-primary text-primary-content shadow-lg' 
                     : 'bg-base-200 hover:bg-base-300'
@@ -427,7 +427,7 @@ export default function Navbar() {
               {/* Variante Montante */}
               <div
                 onClick={() => setSelectedVariant('ascending')}
-                className={`card cursor-pointer transition-all ${
+                className={`card glass cursor-pointer transition-all ${
                   selectedVariant === 'ascending' 
                     ? 'bg-primary text-primary-content shadow-lg' 
                     : 'bg-base-200 hover:bg-base-300'
