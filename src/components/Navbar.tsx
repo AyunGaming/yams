@@ -2,6 +2,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
+import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { useSupabase } from "@/components/Providers"
 import { useGameProtection } from "@/contexts/GameProtectionContext"
@@ -360,8 +361,8 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Modal de création de partie */}
-      {showCreateModal && (
+      {/* Modal de création de partie - rendue via portail pour s'afficher au centre de la page */}
+      {showCreateModal && typeof window !== 'undefined' && createPortal(
         <div className="modal modal-open">
           <div className="modal-box max-w-2xl">
             <h3 className="font-bold text-2xl mb-6">Choisir une variante</h3>
@@ -469,7 +470,8 @@ export default function Navbar() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

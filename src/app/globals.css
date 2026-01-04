@@ -150,6 +150,15 @@ textarea {
   user-select: text;
 }
 
+/* Dé dans la salle d'attente : var(--dice-color) en light, currentColor en dark */
+.waiting-room-dice {
+  fill: var(--color-primary);
+}
+
+[data-theme="yams-dark"] .waiting-room-dice {
+  fill: currentColor;
+}
+
 /* Cartes */
 .card {
   @apply transition-all duration-300;
