@@ -70,7 +70,7 @@ export default function GameHistory() {
 
   if (loading) {
     return (
-      <div className="card bg-base-200/95 backdrop-blur-md border border-base-300">
+      <div className="card-backdrop">
         <div className="card-body">
           <h2 className="card-title">📜 Historique des parties</h2>
           <div className="flex justify-center py-8">

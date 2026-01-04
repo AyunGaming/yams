@@ -47,7 +47,7 @@ export default function FinalLeaderboard({
       </div>
 
       {/* Classement complet */}
-      <div className="card border border-primary/20 hover:border-primary/40 shadow-xl hover:shadow-2xl transition-all duration-300">
+      <div className="card-border-hover">
         <div className="card-body">
           <h3 className="card-title">Classement final</h3>
 

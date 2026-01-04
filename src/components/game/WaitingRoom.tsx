@@ -187,7 +187,7 @@ export default function WaitingRoom({
         {/* Section gauche : Code de la partie */}
         <div className="space-y-6">
           {/* Code de la partie - Grande carte */}
-          <div className="card bg-gradient-to-br from-primary/20 to-secondary/20 shadow-xl border-2 border-primary/30">
+          <div className="card-bordered">
             <div className="card-body items-center text-center">
               <h2 className="card-title text-sm uppercase tracking-wide text-base-content/70 mb-2">
                 Code de la partie
@@ -219,7 +219,7 @@ export default function WaitingRoom({
           </div>
 
           {/* Informations */}
-          <div className="card bg-gradient-to-br from-primary/20 to-secondary/20 shadow-xl border-2 border-primary/30">
+          <div className="card-bordered">
             <div className="card-body">
               <h3 className="card-title text-lg">ℹ️ Informations</h3>
               <div className="space-y-2 text-sm">
@@ -383,7 +383,7 @@ export default function WaitingRoom({
         {/* Section droite : Joueurs */}
         <div className="space-y-6">
           {/* Liste des joueurs */}
-          <div className="card bg-gradient-to-br from-primary/20 to-secondary/20 shadow-xl border-2 border-primary/30">
+          <div className="card-bordered">
             <div className="card-body">
               <h2 className="card-title mb-4">
                 👥 Joueurs connectés ({players.length})
@@ -458,7 +458,7 @@ export default function WaitingRoom({
           </div>
 
           {/* Actions */}
-          <div className="card bg-gradient-to-br from-primary/20 to-secondary/20 shadow-xl border-2 border-primary/30">
+          <div className="card-bordered">
             <div className="card-body">
               <div className="space-y-3">
                 {isHost ? (

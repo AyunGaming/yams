@@ -184,8 +184,8 @@ function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targe
       onClick={canChoose ? onChoose : undefined}
       disabled={!canChoose}
       className={`
-        ${canChoose ? '' : 'glass'} w-full p-2 rounded flex justify-between items-center
-        transition-colors
+        score-line
+        ${canChoose ? '' : 'glass'}
         ${isReadOnly
           ? performanceColor || (isChosen 
             ? 'bg-base-300 cursor-default' 

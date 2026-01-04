@@ -106,93 +106,54 @@ function DieComponent({ die, index, onToggleLock, canInteract, isRolling }: DieC
         </div>
       )}
       <DieDotsDisplay value={displayValue} />
-      
-      <style jsx>{`
-        @keyframes roll {
-          0% { 
-            transform: rotate(0deg);
-          }
-          25% { 
-            transform: rotate(90deg);
-          }
-          50% { 
-            transform: rotate(180deg);
-          }
-          75% { 
-            transform: rotate(270deg);
-          }
-          100% { 
-            transform: rotate(360deg);
-          }
-        }
-        .animate-roll {
-          animation: roll 0.6s ease-in-out;
-        }
-        .animate-roll * {
-          border-radius: 50% !important;
-          aspect-ratio: 1 / 1 !important;
-        }
-      `}</style>
     </button>
   )
 }
 
 function DieDotsDisplay({ value }: { value: number }) {
-  const dotStyle: React.CSSProperties = {
-    width: '12px',
-    height: '12px',
-    minWidth: '12px',
-    minHeight: '12px',
-    aspectRatio: '1 / 1',
-    borderRadius: '50%',
-    backgroundColor: 'currentColor',
-    flexShrink: 0,
-    display: 'block',
-    boxSizing: 'border-box',
-  }
 
   const renderDots = () => {
     const patterns = {
       1: (
         <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
           <div></div><div></div><div></div>
-          <div></div><div className="flex items-center justify-center"><div style={dotStyle}></div></div><div></div>
+          <div></div><div className="flex items-center justify-center"><div className="die-dot"></div></div><div></div>
           <div></div><div></div><div></div>
         </div>
       ),
       2: (
         <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
-          <div className="flex items-start justify-start"><div style={dotStyle}></div></div><div></div><div></div>
+          <div className="flex items-start justify-start"><div className="die-dot"></div></div><div></div><div></div>
           <div></div><div></div><div></div>
-          <div></div><div></div><div className="flex items-end justify-end"><div style={dotStyle}></div></div>
+          <div></div><div></div><div className="flex items-end justify-end"><div className="die-dot"></div></div>
         </div>
       ),
       3: (
         <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
-          <div className="flex items-start justify-start"><div style={dotStyle}></div></div><div></div><div></div>
-          <div></div><div className="flex items-center justify-center"><div style={dotStyle}></div></div><div></div>
-          <div></div><div></div><div className="flex items-end justify-end"><div style={dotStyle}></div></div>
+          <div className="flex items-start justify-start"><div className="die-dot"></div></div><div></div><div></div>
+          <div></div><div className="flex items-center justify-center"><div className="die-dot"></div></div><div></div>
+          <div></div><div></div><div className="flex items-end justify-end"><div className="die-dot"></div></div>
         </div>
       ),
       4: (
         <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
-          <div className="flex items-start justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-start justify-end"><div style={dotStyle}></div></div>
+          <div className="flex items-start justify-start"><div className="die-dot"></div></div><div></div><div className="flex items-start justify-end"><div className="die-dot"></div></div>
           <div></div><div></div><div></div>
-          <div className="flex items-end justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-end justify-end"><div style={dotStyle}></div></div>
+          <div className="flex items-end justify-start"><div className="die-dot"></div></div><div></div><div className="flex items-end justify-end"><div className="die-dot"></div></div>
         </div>
       ),
       5: (
         <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
-          <div className="flex items-start justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-start justify-end"><div style={dotStyle}></div></div>
-          <div></div><div className="flex items-center justify-center"><div style={dotStyle}></div></div><div></div>
-          <div className="flex items-end justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-end justify-end"><div style={dotStyle}></div></div>
+          <div className="flex items-start justify-start"><div className="die-dot"></div></div><div></div><div className="flex items-start justify-end"><div className="die-dot"></div></div>
+          <div></div><div className="flex items-center justify-center"><div className="die-dot"></div></div><div></div>
+          <div className="flex items-end justify-start"><div className="die-dot"></div></div><div></div><div className="flex items-end justify-end"><div className="die-dot"></div></div>
         </div>
       ),
       6: (
         <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
-          <div className="flex items-start justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-start justify-end"><div style={dotStyle}></div></div>
-          <div className="flex items-center justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-center justify-end"><div style={dotStyle}></div></div>
-          <div className="flex items-end justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-end justify-end"><div style={dotStyle}></div></div>
+          <div className="flex items-start justify-start"><div className="die-dot"></div></div><div></div><div className="flex items-start justify-end"><div className="die-dot"></div></div>
+          <div className="flex items-center justify-start"><div className="die-dot"></div></div><div></div><div className="flex items-center justify-end"><div className="die-dot"></div></div>
+          <div className="flex items-end justify-start"><div className="die-dot"></div></div><div></div><div className="flex items-end justify-end"><div className="die-dot"></div></div>
         </div>
       ),
     }

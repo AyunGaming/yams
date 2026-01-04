@@ -129,7 +129,7 @@ export default function PlayerScoreCards({
                   <div
                     key={player.id}
                     className={`
-                      card glass bg-base-200 p-4
+                      player-card-glass
                       ${player.abandoned ? 'opacity-50' : ''}
                       ${isCurrentPlayer ? 'ring-2 ring-info' : ''}
                     `}
@@ -201,7 +201,7 @@ export default function PlayerScoreCards({
                       <div
                         key={player.id}
                         className={`
-                          card bg-base-200 p-4
+                          player-card-compact
                           ${player.abandoned ? 'opacity-50' : ''}
                         `}
                       >
