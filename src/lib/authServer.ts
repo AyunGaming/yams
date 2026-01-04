@@ -6,6 +6,7 @@
 
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { randomUUID } from 'crypto'
 import { createAdminClient } from './supabase/admin'
 
 const JWT_EXPIRES_IN_SECONDS = 60 * 60 * 4 // 4h
@@ -109,10 +110,14 @@ export async function registerUser(params: RegisterParams): Promise<{
 
   const password_hash = await hashPassword(password)
 
+  // Générer un UUID pour l'utilisateur (la table users n'a pas de default pour id)
+  const userId = randomUUID()
+
   // Créer d'abord le profil de stats dans users (la FK auth_local_users -> users nécessite que users existe d'abord)
   const { data: createdUser, error: createUserError } = await supabase
     .from('users')
     .insert({
+      id: userId,
       username,
       avatar_url: '',
       parties_jouees: 0,
@@ -132,8 +137,6 @@ export async function registerUser(params: RegisterParams): Promise<{
     console.error('Erreur création profil users:', createUserError)
     throw new Error('Impossible de créer le profil utilisateur')
   }
-
-  const userId = createdUser.id as string
 
   // Créer ensuite l'utilisateur auth avec le même id pour garder la cohérence
   const { data: createdAuth, error: createAuthError } = await supabase
