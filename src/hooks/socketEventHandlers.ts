@@ -9,7 +9,7 @@ import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.share
 import { GameState } from '@/types/game'
 import { logger } from '@/lib/logger'
 
-type Player = { id: string; name: string }
+type Player = { id: string; name: string; ready?: boolean }
 
 /**
  * Configure les listeners de base (room_update, game_started, game_update)

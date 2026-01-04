@@ -11,7 +11,7 @@ import { updateGameStatus } from './gameDbUtils'
 import { verifyGameExists, verifyNotAlreadyInWaitingRoom, verifyCanReconnectToGame, fetchUserAvatar } from './roomSecurityHelpers'
 import { handlePlayerReconnection } from './roomReconnectionHelpers'
 
-type Player = { id: string; name: string; userId?: string; avatar?: string }
+type Player = { id: string; name: string; userId?: string; avatar?: string; ready?: boolean }
 type RoomState = { started: boolean }
 
 // Stocke les timers de compte à rebours par room
@@ -31,6 +31,7 @@ function getPlayersInRoom(io: Server, roomId: string): Player[] {
       name: s?.data?.playerName || 'Unknown',
       userId: s?.data?.userId || undefined,
       avatar: s?.data?.avatar || undefined,
+      ready: s?.data?.ready || false,
     }
   })
 }
@@ -137,6 +138,9 @@ export function setupRoomHandlers(
 
     // Rejoindre la room (seulement après toutes les vérifications)
     socket.join(roomId)
+
+    // Initialiser le statut "prêt" à false pour les nouveaux joueurs
+    socket.data.ready = false
 
     // Récupérer les joueurs dans la room
     const players = getPlayersInRoom(io, roomId)
@@ -245,6 +249,36 @@ export function setupRoomHandlers(
   })
 
   /**
+   * Marquer un joueur comme prêt ou non prêt (toggle)
+   */
+  socket.on('player_ready', (roomId: string) => {
+    if (!socket.data.authenticated) {
+      socket.emit('error', { message: 'Non authentifié' })
+      return
+    }
+
+    const roomState = roomStates.get(roomId)
+    if (roomState?.started) {
+      return
+    }
+
+    // Basculer le statut prêt
+    socket.data.ready = !socket.data.ready
+    const playerName = socket.data.playerName || 'Un joueur'
+    const isReady = socket.data.ready
+
+    // Récupérer les joueurs mis à jour
+    const players = getPlayersInRoom(io, roomId)
+
+    // Notifier tous les joueurs de la mise à jour
+    io.to(roomId).emit('room_update', {
+      players,
+      started: false,
+    })
+    io.to(roomId).emit('system_message', `${playerName} ${isReady ? 'est prêt' : 'n\'est plus prêt'}`)
+  })
+
+  /**
    * Lancer un compte à rebours avant le début de la partie
    */
   socket.on('start_countdown', (roomId: string) => {
@@ -264,6 +298,17 @@ export function setupRoomHandlers(
     if (players.length < 2) {
       console.log('[ROOM] Pas assez de joueurs pour démarrer le compte à rebours')
       socket.emit('system_message', 'Au moins 2 joueurs sont nécessaires pour démarrer la partie.')
+      return
+    }
+
+    // Vérifier que tous les joueurs (sauf l'hôte) sont prêts
+    // L'hôte est le premier joueur dans la liste
+    const nonHostPlayers = players.slice(1)
+    const allNonHostReady = nonHostPlayers.length > 0 && nonHostPlayers.every(p => p.ready === true)
+
+    if (!allNonHostReady) {
+      const notReadyPlayers = nonHostPlayers.filter(p => !p.ready).map(p => p.name)
+      socket.emit('system_message', `Tous les joueurs doivent être prêts. En attente de: ${notReadyPlayers.join(', ')}`)
       return
     }
 
@@ -307,6 +352,9 @@ export function setupRoomHandlers(
    */
   socket.on('leave_room', (roomId: string) => {
     const playerName = socket.data.playerName || 'Un joueur'
+
+    // Réinitialiser le statut prêt
+    socket.data.ready = false
 
     // Quitter la room
     socket.leave(roomId)

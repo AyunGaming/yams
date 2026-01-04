@@ -9,7 +9,7 @@ import { Socket } from 'socket.io-client'
 import { GameVariant } from '@/types/game'
 import { VARIANT_NAMES } from '@/lib/variantLogic'
 
-type Player = { id: string; name: string; avatar?: string }
+type Player = { id: string; name: string; avatar?: string; ready?: boolean }
 
 interface WaitingRoomProps {
   uuid: string
@@ -139,7 +139,10 @@ export default function WaitingRoom({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const canStart = players.length >= 2
+  // Vérifier que tous les joueurs (sauf l'hôte) sont prêts
+  const nonHostPlayers = players.slice(1)
+  const allNonHostReady = nonHostPlayers.length > 0 && nonHostPlayers.every(p => p.ready === true)
+  const canStart = players.length >= 2 && allNonHostReady
 
   const handleMaxPlayersChange = async (newMax: number) => {
     if (!isHost || !socket || updatingMaxPlayers) return
@@ -423,7 +426,14 @@ export default function WaitingRoom({
                       )}
                     </div>
                     {/* Badge */}
-                    {index === 0 && <span className="badge badge-primary badge-sm flex-shrink-0">Hôte</span>}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {index === 0 && <span className="badge badge-primary badge-sm">Hôte</span>}
+                      {index > 0 && (
+                        <span className={`badge badge-sm ${p.ready ? 'badge-success' : 'badge-warning'}`}>
+                          {p.ready ? '✓ Prêt' : 'En attente'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
 
@@ -476,11 +486,18 @@ export default function WaitingRoom({
                             : 'Démarrer la partie'}
                         </span>
                       </button>
-                    ) : (
+                    ) : players.length < 2 ? (
                       <div className="alert alert-warning">
                         <span>⏳</span>
                         <span className="text-sm">
                           En attente d&apos;au moins un autre joueur...
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="alert alert-warning">
+                        <span>⏳</span>
+                        <span className="text-sm">
+                          En attente que tous les joueurs soient prêts...
                         </span>
                       </div>
                     )}
@@ -490,12 +507,37 @@ export default function WaitingRoom({
                   </>
                 ) : (
                   <>
-                    <div className="alert alert-info">
-                      <span>👤</span>
-                      <span className="text-sm">
-                        L&apos;hôte va lancer la partie bientôt...
-                      </span>
-                    </div>
+                    {players.length >= 2 ? (
+                      <button
+                        onClick={() => {
+                          if (socket) {
+                            socket.emit('player_ready', uuid)
+                          }
+                        }}
+                        className={`btn btn-lg w-full gap-2 ${
+                          players.find(p => p.id === socket?.id)?.ready
+                            ? 'btn-success'
+                            : 'btn-primary'
+                        }`}
+                        disabled={preGameCountdown !== null}
+                      >
+                        <span>
+                          {players.find(p => p.id === socket?.id)?.ready ? '✓' : '👋'}
+                        </span>
+                        <span>
+                          {players.find(p => p.id === socket?.id)?.ready
+                            ? 'Prêt !'
+                            : 'Marquer comme prêt'}
+                        </span>
+                      </button>
+                    ) : (
+                      <div className="alert alert-info">
+                        <span>👤</span>
+                        <span className="text-sm">
+                          En attente d&apos;au moins un autre joueur...
+                        </span>
+                      </div>
+                    )}
                     <button onClick={onLeave} className="btn btn-outline btn-error w-full">
                       🚪 Quitter la salle
                     </button>
