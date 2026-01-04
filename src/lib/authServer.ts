@@ -109,10 +109,38 @@ export async function registerUser(params: RegisterParams): Promise<{
 
   const password_hash = await hashPassword(password)
 
-  // Créer l’utilisateur auth + profil avec le même id pour garder la cohérence
+  // Créer d'abord le profil de stats dans users (la FK auth_local_users -> users nécessite que users existe d'abord)
+  const { data: createdUser, error: createUserError } = await supabase
+    .from('users')
+    .insert({
+      username,
+      avatar_url: '',
+      parties_jouees: 0,
+      parties_gagnees: 0,
+      parties_abandonnees: 0,
+      meilleur_score: 0,
+      score_total: 0,
+      nombre_yams_realises: 0,
+      meilleure_serie_victoires: 0,
+      serie_victoires_actuelle: 0,
+      xp: 0,
+      level: 1,
+    })
+    .select('id')
+    .single()
+
+  if (createUserError || !createdUser) {
+    console.error('Erreur création profil users:', createUserError)
+    throw new Error('Impossible de créer le profil utilisateur')
+  }
+
+  const userId = createdUser.id as string
+
+  // Créer ensuite l'utilisateur auth avec le même id pour garder la cohérence
   const { data: createdAuth, error: createAuthError } = await supabase
     .from('auth_local_users')
     .insert({
+      id: userId,
       email: email.toLowerCase(),
       password_hash,
       email_verified: false,
@@ -122,31 +150,9 @@ export async function registerUser(params: RegisterParams): Promise<{
 
   if (createAuthError || !createdAuth) {
     console.error('Erreur création auth_local_users:', createAuthError)
+    // Nettoyer le profil users créé si l'auth échoue
+    await supabase.from('users').delete().eq('id', userId)
     throw new Error('Impossible de créer le compte utilisateur')
-  }
-
-  const userId = createdAuth.id as string
-
-  // Créer le profil de stats (si non existant)
-  const { error: profileError } = await supabase.from('users').insert({
-    id: userId,
-    username,
-    avatar_url: '',
-    parties_jouees: 0,
-    parties_gagnees: 0,
-    parties_abandonnees: 0,
-    meilleur_score: 0,
-    score_total: 0,
-    nombre_yams_realises: 0,
-    meilleure_serie_victoires: 0,
-    serie_victoires_actuelle: 0,
-    xp: 0,
-    level: 1,
-  })
-
-  if (profileError) {
-    console.error('Erreur création profil users:', profileError)
-    throw new Error('Compte créé, mais erreur lors de la création du profil')
   }
 
   // Générer un token de vérification d’email
