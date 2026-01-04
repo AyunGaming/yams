@@ -109,13 +109,28 @@ function DieComponent({ die, index, onToggleLock, canInteract, isRolling }: DieC
       
       <style jsx>{`
         @keyframes roll {
-          0%, 100% { transform: rotate(0deg); }
-          25% { transform: rotate(90deg) scale(1.1); }
-          50% { transform: rotate(180deg) scale(0.9); }
-          75% { transform: rotate(270deg) scale(1.1); }
+          0% { 
+            transform: rotate(0deg);
+          }
+          25% { 
+            transform: rotate(90deg);
+          }
+          50% { 
+            transform: rotate(180deg);
+          }
+          75% { 
+            transform: rotate(270deg);
+          }
+          100% { 
+            transform: rotate(360deg);
+          }
         }
         .animate-roll {
           animation: roll 0.6s ease-in-out;
+        }
+        .animate-roll * {
+          border-radius: 50% !important;
+          aspect-ratio: 1 / 1 !important;
         }
       `}</style>
     </button>
@@ -123,50 +138,61 @@ function DieComponent({ die, index, onToggleLock, canInteract, isRolling }: DieC
 }
 
 function DieDotsDisplay({ value }: { value: number }) {
+  const dotStyle: React.CSSProperties = {
+    width: '12px',
+    height: '12px',
+    minWidth: '12px',
+    minHeight: '12px',
+    aspectRatio: '1 / 1',
+    borderRadius: '50%',
+    backgroundColor: 'currentColor',
+    flexShrink: 0,
+    display: 'block',
+    boxSizing: 'border-box',
+  }
+
   const renderDots = () => {
-    const dotClass = "w-3 h-3 rounded-full bg-current"
-    
     const patterns = {
       1: (
         <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
           <div></div><div></div><div></div>
-          <div></div><div className="flex items-center justify-center"><div className={dotClass}></div></div><div></div>
+          <div></div><div className="flex items-center justify-center"><div style={dotStyle}></div></div><div></div>
           <div></div><div></div><div></div>
         </div>
       ),
       2: (
-        <div className="grid grid-cols-3 gap-1 w-full h-full p-2">
-          <div className={dotClass}></div><div></div><div></div>
+        <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
+          <div className="flex items-start justify-start"><div style={dotStyle}></div></div><div></div><div></div>
           <div></div><div></div><div></div>
-          <div></div><div></div><div className={dotClass}></div>
+          <div></div><div></div><div className="flex items-end justify-end"><div style={dotStyle}></div></div>
         </div>
       ),
       3: (
-        <div className="grid grid-cols-3 gap-1 w-full h-full p-2">
-          <div className={dotClass}></div><div></div><div></div>
-          <div></div><div className={dotClass}></div><div></div>
-          <div></div><div></div><div className={dotClass}></div>
+        <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
+          <div className="flex items-start justify-start"><div style={dotStyle}></div></div><div></div><div></div>
+          <div></div><div className="flex items-center justify-center"><div style={dotStyle}></div></div><div></div>
+          <div></div><div></div><div className="flex items-end justify-end"><div style={dotStyle}></div></div>
         </div>
       ),
       4: (
-        <div className="grid grid-cols-3 gap-1 w-full h-full p-2">
-          <div className={dotClass}></div><div></div><div className={dotClass}></div>
+        <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
+          <div className="flex items-start justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-start justify-end"><div style={dotStyle}></div></div>
           <div></div><div></div><div></div>
-          <div className={dotClass}></div><div></div><div className={dotClass}></div>
+          <div className="flex items-end justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-end justify-end"><div style={dotStyle}></div></div>
         </div>
       ),
       5: (
-        <div className="grid grid-cols-3 gap-1 w-full h-full p-2">
-          <div className={dotClass}></div><div></div><div className={dotClass}></div>
-          <div></div><div className={dotClass}></div><div></div>
-          <div className={dotClass}></div><div></div><div className={dotClass}></div>
+        <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
+          <div className="flex items-start justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-start justify-end"><div style={dotStyle}></div></div>
+          <div></div><div className="flex items-center justify-center"><div style={dotStyle}></div></div><div></div>
+          <div className="flex items-end justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-end justify-end"><div style={dotStyle}></div></div>
         </div>
       ),
       6: (
-        <div className="grid grid-cols-3 gap-1 w-full h-full p-2">
-          <div className={dotClass}></div><div></div><div className={dotClass}></div>
-          <div className={dotClass}></div><div></div><div className={dotClass}></div>
-          <div className={dotClass}></div><div></div><div className={dotClass}></div>
+        <div className="grid grid-cols-3 grid-rows-3 gap-1 w-full h-full p-2">
+          <div className="flex items-start justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-start justify-end"><div style={dotStyle}></div></div>
+          <div className="flex items-center justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-center justify-end"><div style={dotStyle}></div></div>
+          <div className="flex items-end justify-start"><div style={dotStyle}></div></div><div></div><div className="flex items-end justify-end"><div style={dotStyle}></div></div>
         </div>
       ),
     }
@@ -174,6 +200,16 @@ function DieDotsDisplay({ value }: { value: number }) {
     return patterns[value as keyof typeof patterns] || <span>{value}</span>
   }
 
-  return <div className="w-full h-full flex items-center justify-center">{renderDots()}</div>
+  return (
+    <div 
+      className="w-full h-full flex items-center justify-center"
+      style={{
+        transform: 'rotate(0deg)',
+        transformStyle: 'preserve-3d',
+      }}
+    >
+      {renderDots()}
+    </div>
+  )
 }
 
