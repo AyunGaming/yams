@@ -50,7 +50,7 @@ export default function ActiveCategoryCard({
   const description = CATEGORY_DESCRIPTIONS[category] || categoryDescription
 
   return (
-    <div className="card bg-gradient-to-br from-primary/10 to-secondary/10 shadow-xl max-w-3xl mx-auto">
+    <div className="card shadow-xl max-w-3xl mx-auto">
       <div className="card-body p-4">
         {/* En-tête */}
         <div className="flex items-center gap-2 mb-3">
@@ -58,7 +58,7 @@ export default function ActiveCategoryCard({
         </div>
 
         {/* Ligne de catégorie (ressemble à ScoreLine mais plus grande) */}
-        <div className="bg-base-100 rounded-lg p-4 shadow-md border-l-4 border-primary">
+        <div className="glass rounded-lg p-4 shadow-md border-l-4 border-primary">
           <div className="flex justify-between items-center">
             <div className="text-left">
               <div className="font-bold text-xl">{categoryLabel}</div>

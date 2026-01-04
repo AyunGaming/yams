@@ -93,7 +93,7 @@ export default function CreateGame() {
               {/* Variante Classique */}
               <div
                 onClick={() => setSelectedVariant('classic')}
-                className={`card cursor-pointer transition-all ${
+                className={`card glass cursor-pointer transition-all ${
                   selectedVariant === 'classic' 
                     ? 'bg-primary text-primary-content shadow-lg' 
                     : 'bg-base-200 hover:bg-base-300'
@@ -121,7 +121,7 @@ export default function CreateGame() {
               {/* Variante Descendante */}
               <div
                 onClick={() => setSelectedVariant('descending')}
-                className={`card cursor-pointer transition-all ${
+                className={`card glass cursor-pointer transition-all ${
                   selectedVariant === 'descending' 
                     ? 'bg-primary text-primary-content shadow-lg' 
                     : 'bg-base-200 hover:bg-base-300'
@@ -149,7 +149,7 @@ export default function CreateGame() {
               {/* Variante Montante */}
               <div
                 onClick={() => setSelectedVariant('ascending')}
-                className={`card cursor-pointer transition-all ${
+                className={`card glass cursor-pointer transition-all ${
                   selectedVariant === 'ascending' 
                     ? 'bg-primary text-primary-content shadow-lg' 
                     : 'bg-base-200 hover:bg-base-300'

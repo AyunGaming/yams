@@ -101,7 +101,7 @@ function DieComponent({ die, index, onToggleLock, canInteract, isRolling }: DieC
       }}
     >
       {die.locked && (
-        <div className="absolute -top-1 -right-1 w-6 h-6 bg-error rounded-full flex items-center justify-center text-xs">
+        <div className="absolute -top-1 -right-1 w-6 h-6 bg-error rounded-full flex items-center justify-center text-xs z-50">
           🔒
         </div>
       )}
