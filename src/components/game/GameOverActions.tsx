@@ -136,7 +136,7 @@ export default function GameOverActions({
   }
 
   return (
-    <div className="card bg-base-200">
+    <div className="card-border-hover">
       <div className="card-body">
         <h3 className="card-title">Actions</h3>
 

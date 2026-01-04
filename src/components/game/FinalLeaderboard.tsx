@@ -32,7 +32,7 @@ export default function FinalLeaderboard({
     <div className="space-y-6">
       {/* Bannière du gagnant */}
       <div
-        className={`card ${isWinner ? 'bg-gradient-to-br from-success/20 to-warning/10' : 'bg-base-200'} border-2 ${isWinner ? 'border-success' : 'border-primary'} shadow-xl`}
+        className={`card border-2 ${isWinner ? 'border-success' : 'border-primary'} shadow-xl`}
       >
         <div className="card-body items-center text-center">
           <div className="flex items-center gap-3 mb-2">
@@ -47,7 +47,7 @@ export default function FinalLeaderboard({
       </div>
 
       {/* Classement complet */}
-      <div className="card bg-base-200">
+      <div className="card-border-hover">
         <div className="card-body">
           <h3 className="card-title">Classement final</h3>
 
@@ -60,7 +60,7 @@ export default function FinalLeaderboard({
                 <div
                   key={player.id}
                   className={`
-                    flex items-center justify-between p-4 rounded-lg 
+                    flex items-center justify-between p-4 glass rounded-lg 
                     ${isMe ? 'bg-primary/20 border-2 border-primary' : 'bg-base-300'}
                     ${player.abandoned ? 'opacity-60' : ''}
                   `}

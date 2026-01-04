@@ -65,11 +65,14 @@ export default function XPBar({ currentXp, currentLevel, size = 'md' }: XPBarPro
       {/* Barre de progression */}
       <div className={`w-full bg-base-300 rounded-full overflow-hidden ${sizeClasses[size]}`}>
         <div
-          className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500 ease-out flex items-center justify-end pr-2"
-          style={{ width: `${progressPercent}%` }}
+          className="h-full transition-all duration-500 ease-out flex items-center justify-end pr-2"
+          style={{ 
+            width: `${progressPercent}%`,
+            background: 'var(--gradient-secondary)'
+          }}
         >
           {progressPercent > 15 && (
-            <span className="text-primary-content font-semibold text-xs">
+            <span className="text-secondary-content font-semibold text-xs">
               {Math.round(progressPercent)}%
             </span>
           )}

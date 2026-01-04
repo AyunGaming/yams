@@ -1,16 +1,146 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Par défaut, le contenu n'est pas sélectionnable */
+/* Variables CSS personnalisées */
+:root,
+[data-theme="yams"] {
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  --gradient-secondary: linear-gradient(135deg, #F8B181 0%, #FAD533 100%);
+  --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --shadow-glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
+  --shadow-glow-secondary: 0 0 20px rgba(248, 177, 129, 0.3);
+  --dice-color: #FAD533;
+  
+  /* Variables DaisyUI (format HSL) */
+  --p: 238 83% 66%;
+  --pf: 238 83% 58%;
+  --pc: 0 0% 100%;
+  --s: 38 92% 50%;
+  --sf: 38 92% 42%;
+  --sc: 0 0% 100%;
+  --a: 160 84% 39%;
+  --af: 158 64% 52%;
+  --ac: 0 0% 100%;
+  --n: 215 28% 17%;
+  --nf: 215 28% 11%;
+  --nc: 0 0% 100%;
+  --b1: 0 0% 100%;
+  --b2: 210 20% 98%;
+  --b3: 216 12% 84%;
+  --bc: 215 28% 17%;
+  --in: 217 91% 60%;
+  --inc: 0 0% 100%;
+  --su: 160 84% 39%;
+  --suc: 0 0% 100%;
+  --wa: 38 92% 50%;
+  --wac: 0 0% 100%;
+  --er: 0 84% 60%;
+  --erc: 0 0% 100%;
+  
+  /* Variables Tailwind pour les classes bg-* */
+  --color-base-100: hsl(var(--b1));
+  --color-base-200: hsl(var(--b2));
+  --color-base-300: hsl(var(--b3));
+  --color-base-content: hsl(var(--bc));
+  --color-primary: hsl(var(--p));
+  --color-secondary: hsl(var(--s));
+  --color-accent: hsl(var(--a));
+  --color-neutral: hsl(var(--n));
+  --color-secondary-content: #1f2937;
+}
+
+[data-theme="yams-dark"] {
+  --gradient-primary: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+  --gradient-secondary: linear-gradient(135deg, #F8B181 0%, #FAD533 100%);
+  --gradient-success: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  --shadow-glow-primary: 0 0 20px rgba(129, 140, 248, 0.4);
+  --shadow-glow-secondary: 0 0 20px rgba(248, 177, 129, 0.4);
+  --dice-color: #F8EC81;
+  
+  /* Variables DaisyUI (format HSL) */
+  --p: 218 91% 70%;
+  --pf: 217 91% 60%;
+  --pc: 222 47% 11%;
+  --s: 43 96% 56%;
+  --sf: 38 92% 50%;
+  --sc: 25 95% 53%;
+  --a: 160 84% 39%;
+  --af: 158 64% 52%;
+  --ac: 173 80% 40%;
+  --n: 215 16% 47%;
+  --nf: 215 19% 35%;
+  --nc: 0 0% 100%;
+  --b1: 222 47% 11%;
+  --b2: 215 28% 17%;
+  --b3: 215 16% 47%;
+  --bc: 210 40% 98%;
+  --in: 217 91% 60%;
+  --inc: 222 47% 11%;
+  --su: 160 84% 39%;
+  --suc: 173 80% 40%;
+  --wa: 43 96% 56%;
+  --wac: 25 95% 53%;
+  --er: 0 84% 60%;
+  --erc: 0 0% 100%;
+  
+  /* Variables Tailwind pour les classes bg-* */
+  --color-base-100: hsl(var(--b1));
+  --color-base-200: hsl(var(--b2));
+  --color-base-300: hsl(var(--b3));
+  --color-base-content: hsl(var(--bc));
+  --color-primary: hsl(var(--p));
+  --color-secondary: hsl(var(--s));
+  --color-accent: hsl(var(--a));
+  --color-neutral: hsl(var(--n));
+  --color-secondary-content: #1f2937;
+}
+
+/* Styles de base */
+* {
+  @apply transition-colors duration-200;
+}
+
+html {
+  background-color: hsl(var(--b1));
+}
+
 body {
+  @apply font-sans antialiased;
+  background-color: hsl(var(--b1));
+  color: hsl(var(--bc));
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
 }
 
-/* Zones qui doivent rester sélectionnables (ID de partie, champs de formulaire, etc.) */
+/* Titres avec dégradé primary */
+h1,
+.font-display,
+.navbar-logo-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Titres dans les cartes gardent base-content pour le contraste */
+.card h1,
+.card h2,
+.card h3,
+.card h4,
+.card h5,
+.card h6,
+.card-title {
+  color: hsl(var(--bc)) !important;
+  background: none !important;
+  -webkit-text-fill-color: hsl(var(--bc)) !important;
+}
+
+/* Zones qui doivent rester sélectionnables */
 .selectable-text,
 input,
 textarea {
@@ -18,6 +148,120 @@ textarea {
   -moz-user-select: text;
   -ms-user-select: text;
   user-select: text;
+}
+
+/* Dé dans la salle d'attente : var(--dice-color) en light, currentColor en dark */
+.waiting-room-dice {
+  fill: var(--color-primary);
+}
+
+[data-theme="yams-dark"] .waiting-room-dice {
+  fill: currentColor;
+}
+
+/* Cartes */
+.card {
+  @apply transition-all duration-300;
+}
+
+.card:hover {
+  @apply shadow-xl;
+  transform: translateY(-2px);
+}
+
+/* Boutons */
+.btn {
+  @apply font-medium transition-all duration-200;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  box-shadow: var(--shadow-glow-primary);
+  border: none;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-secondary {
+  background: var(--gradient-secondary);
+  box-shadow: var(--shadow-glow-secondary);
+  color: #1f2937;
+}
+
+.btn-secondary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(248, 177, 129, 0.3);
+  color: #111827;
+}
+
+.btn-success {
+  background: var(--gradient-success);
+}
+
+.btn-success:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Badges */
+.badge {
+  @apply font-semibold;
+}
+
+.badge-primary {
+  background: var(--gradient-primary);
+}
+
+.badge-secondary {
+  background: var(--gradient-secondary);
+}
+
+/* Inputs */
+.input:focus,
+.textarea:focus,
+.select:focus {
+  @apply ring-2 ring-primary ring-offset-2;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Input sans style de focus */
+.input-no-focus:focus,
+button.input-no-focus:focus {
+  @apply ring-0 ring-offset-0;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Table hover effect */
+table tbody tr:hover {
+  background-color: hsl(var(--b3) / 0.5) !important;
+}
+
+.menu-title {
+  color: #F9FAFC !important;
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-base-200;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary opacity-80;
 }
 
 @layer utilities {
@@ -29,17 +273,6 @@ textarea {
     100% {
       opacity: 1;
       transform: translateY(0);
-    }
-  }
-
-  @keyframes slide-up {
-    0% {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    100% {
-      opacity: 0;
-      transform: translateY(-50px);
     }
   }
 
@@ -63,35 +296,13 @@ textarea {
       transform: translateY(0) rotate(0deg);
     }
     25% {
-      transform: translateY(-10px) rotate(5deg);
+      transform: translateY(-5px) rotate(2deg);
     }
     50% {
-      transform: translateY(-20px) rotate(-5deg);
+      transform: translateY(-10px) rotate(-2deg);
     }
     75% {
-      transform: translateY(-10px) rotate(3deg);
-    }
-  }
-
-  @keyframes sparkle {
-    0%, 100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.5;
-      transform: scale(1.3);
-    }
-  }
-
-  @keyframes confetti-fall {
-    0% {
-      transform: translateY(-100vh) rotate(0deg);
-      opacity: 1;
-    }
-    100% {
-      transform: translateY(100vh) rotate(720deg);
-      opacity: 0;
+      transform: translateY(-5px) rotate(1deg);
     }
   }
 
@@ -103,6 +314,35 @@ textarea {
     100% {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-up {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-50px);
+    }
+  }
+
+  @keyframes roll {
+    0% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(90deg);
+    }
+    50% {
+      transform: rotate(180deg);
+    }
+    75% {
+      transform: rotate(270deg);
+    }
+    100% {
+      transform: rotate(360deg);
     }
   }
 
@@ -119,18 +359,75 @@ textarea {
   }
 
   .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-
-  .animate-sparkle {
-    animation: sparkle 1.5s ease-in-out infinite;
-  }
-
-  .animate-confetti {
-    animation: confetti-fall 3s linear infinite;
+    animation: float 5s ease-in-out infinite;
   }
 
   .animate-slide-in-bottom {
     animation: slide-in-from-bottom 0.6s ease-out forwards;
+  }
+
+  .animate-roll {
+    animation: roll 0.6s ease-in-out;
+  }
+
+  .animate-roll * {
+    border-radius: 50% !important;
+    aspect-ratio: 1 / 1 !important;
+  }
+}
+
+/* Classes utilitaires réutilisables */
+@layer components {
+  /* Carte avec bordure hover */
+  .card-border-hover {
+    @apply card border shadow-xl transition-all duration-300;
+    border-color: hsl(var(--p) / 0.2);
+  }
+
+  .card-border-hover:hover {
+    @apply shadow-2xl;
+    border-color: hsl(var(--p) / 0.4);
+  }
+
+  /* Carte avec bordures */
+  .card-bordered {
+    @apply card shadow-xl border-2;
+    border-color: hsl(var(--p) / 0.3);
+  }
+
+  /* Carte avec backdrop blur */
+  .card-backdrop {
+    @apply card backdrop-blur-md border;
+    background-color: hsl(var(--b2) / 0.95);
+    border-color: hsl(var(--b3));
+  }
+
+  /* Carte de joueur compacte */
+  .player-card-compact {
+    @apply card bg-base-200 p-4;
+  }
+
+  /* Carte de joueur avec glass effect */
+  .player-card-glass {
+    @apply card glass bg-base-200 p-4;
+  }
+
+  /* Ligne de score */
+  .score-line {
+    @apply w-full p-2 rounded flex justify-between items-center transition-colors;
+  }
+
+  /* Point de dé */
+  .die-dot {
+    width: 12px;
+    height: 12px;
+    min-width: 12px;
+    min-height: 12px;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    background-color: currentColor;
+    flex-shrink: 0;
+    display: block;
+    box-sizing: border-box;
   }
 }

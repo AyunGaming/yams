@@ -70,52 +70,88 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-[70vh]">
+    <div className="flex justify-center items-center min-h-[70vh] relative overflow-hidden">
+      {/* Fond avec dégradé */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10"></div>
+      
       <form
         onSubmit={handleSubmit}
-        className="bg-base-200 p-8 rounded-lg shadow-md w-full max-w-md space-y-4"
+        className="bg-base-100 p-8 md:p-10 rounded-2xl shadow-2xl w-full max-w-md space-y-6 relative z-10 border border-base-300"
       >
-        <h1 className="text-2xl font-bold text-center">Connexion</h1>
+        <div className="text-center mb-6">
+          <h1 className="text-3xl md:text-4xl font-display font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            Connexion
+          </h1>
+          <p className="text-base-content/70">Bienvenue sur Yams !</p>
+        </div>
 
-        <input
-          name="email"
-          type="email"
-          placeholder="Email"
-          className="input input-bordered w-full"
-          onChange={handleChange}
-        />
-        <input
-          name="password"
-          type="password"
-          placeholder="Mot de passe"
-          className="input input-bordered w-full"
-          onChange={handleChange}
-        />
+        <div className="space-y-4">
+          <div>
+            <label className="label">
+              <span className="label-text font-semibold">Email</span>
+            </label>
+            <input
+              name="email"
+              type="email"
+              placeholder="votre@email.com"
+              className="input input-bordered w-full focus:input-primary"
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <label className="label">
+              <span className="label-text font-semibold">Mot de passe</span>
+            </label>
+            <input
+              name="password"
+              type="password"
+              placeholder="••••••••"
+              className="input input-bordered w-full focus:input-primary"
+              onChange={handleChange}
+            />
+          </div>
+        </div>
 
         <button
           type="submit"
-          className="btn btn-primary w-full"
+          className="btn btn-primary w-full btn-lg gap-2 shadow-lg"
           disabled={loading}
         >
-          {loading ? 'Connexion...' : 'Se connecter'}
+          {loading ? (
+            <>
+              <span className="loading loading-spinner loading-sm"></span>
+              <span>Connexion...</span>
+            </>
+          ) : (
+            <>
+              <span>🔐</span>
+              <span>Se connecter</span>
+            </>
+          )}
         </button>
 
         {message && (
-          <p className="text-center text-sm text-base-content/80">{message}</p>
+          <div className={`alert ${message.includes('✅') ? 'alert-success' : 'alert-error'} shadow-lg`}>
+            <span>{message}</span>
+          </div>
         )}
 
-        <p className="text-center text-sm mt-3">
-          <a href="/reset-password" className="link link-primary">
-            Mot de passe oublié ?
-          </a>
-        </p>
+        <div className="divider">ou</div>
 
-        <p className="text-center text-sm mt-1">
-          Pas encore de compte ?{' '}
-          <a href="/register" className="link link-primary">
-            Inscris-toi
-          </a>
-        </p>
+        <div className="space-y-3 text-center">
+          <p className="text-sm">
+            <a href="/reset-password" className="link link-primary font-semibold">
+              Mot de passe oublié ?
+            </a>
+          </p>
+
+          <p className="text-sm text-base-content/70">
+            Pas encore de compte ?{' '}
+            <a href="/register" className="link link-primary font-semibold">
+              Inscris-toi
+            </a>
+          </p>
+        </div>
       </form>
     </div>
   )

@@ -45,7 +45,7 @@ export default function Leaderboard() {
 
   if (loading) {
     return (
-      <div className="card bg-base-200 p-6">
+      <div className="card-backdrop p-6">
         <div className="text-center">
           <span className="loading loading-spinner loading-lg"></span>
           <p className="mt-4">Chargement du classement...</p>
@@ -56,7 +56,7 @@ export default function Leaderboard() {
 
   if (error) {
     return (
-      <div className="card bg-base-200 p-6">
+      <div className="card-backdrop p-6">
         <div className="alert alert-error">
           <span>Erreur lors du chargement du classement: {error}</span>
         </div>
@@ -66,7 +66,7 @@ export default function Leaderboard() {
 
   if (!leaderboardData || leaderboardData.length === 0) {
     return (
-      <div className="card bg-base-200 p-6">
+      <div className="card-backdrop p-6">
         <div className="alert alert-info">
           <span>Aucun joueur dans le classement pour le moment.</span>
         </div>
@@ -82,7 +82,7 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="card bg-base-200 p-4 md:p-6">
+    <div className="card-backdrop p-4 md:p-6">
       <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">🏆 Top 10 des meilleurs joueurs</h2>
 
       {/* Version mobile : cartes */}
@@ -94,7 +94,7 @@ export default function Leaderboard() {
           return (
             <div
               key={player.id}
-              className={`card bg-base-100 shadow-sm ${
+              className={`card-backdrop shadow-sm ${
                 isCurrentUser ? 'ring-2 ring-primary' : ''
               }`}
             >
@@ -176,7 +176,7 @@ export default function Leaderboard() {
 
       {/* Version desktop : tableau */}
       <div className="hidden md:block overflow-x-auto">
-        <table className="table table-zebra w-full">
+        <table className="table w-full">
           <thead>
             <tr>
               <th className="text-center">Rang</th>
@@ -197,7 +197,9 @@ export default function Leaderboard() {
               return (
                 <tr
                   key={player.id}
-                  className={`${isCurrentUser ? 'bg-primary/20 font-bold' : ''}`}
+                  className={`transition-colors hover:bg-base-300/50 ${
+                    isCurrentUser ? 'bg-primary/20 font-bold' : ''
+                  }`}
                 >
                   <td className="text-center text-lg">
                     {getMedalEmoji(position)}
