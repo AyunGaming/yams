@@ -184,7 +184,7 @@ function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targe
       onClick={canChoose ? onChoose : undefined}
       disabled={!canChoose}
       className={`
-        w-full p-2 rounded flex justify-between items-center
+        ${canChoose ? '' : 'glass'} w-full p-2 rounded flex justify-between items-center
         transition-colors
         ${isReadOnly
           ? performanceColor || (isChosen 
@@ -193,7 +193,7 @@ function ScoreLine({ category, score, potentialScore, onChoose, canChoose, targe
           : performanceColor || (isChosen 
             ? 'bg-base-300 cursor-default' 
             : canChoose 
-              ? 'bg-base-100 hover:bg-primary/20 cursor-pointer border border-primary/50' 
+              ? 'bg-base-100 hover:bg-primary/20 cursor-pointer outline-2 outline outline-primary shadow-[0_0_8px_rgba(99,102,241,0.6)]' 
               : 'bg-base-100 cursor-not-allowed opacity-60'
           )
         }
