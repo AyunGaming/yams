@@ -119,7 +119,6 @@ export async function registerUser(params: RegisterParams): Promise<{
       parties_gagnees: 0,
       parties_abandonnees: 0,
       meilleur_score: 0,
-      score_total: 0,
       nombre_yams_realises: 0,
       meilleure_serie_victoires: 0,
       serie_victoires_actuelle: 0,
