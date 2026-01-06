@@ -32,10 +32,13 @@ export interface AchievementCheckContext {
     serie_victoires_actuelle: number
     level: number
     parties_jouees: number
+    parties_jouees_avant?: number
+    parties_gagnees_avant?: number
   }
   gameData: {
     score: number
     won: boolean
+    abandoned?: boolean
     yamsCount: number
     yamsByFace?: {
       1?: number

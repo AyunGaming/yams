@@ -2,13 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useFlashMessage } from '@/contexts/FlashMessageContext'
 
 export default function JoinGame() {
   const router = useRouter()
   const [gameId, setGameId] = useState('')
   const [loading, setLoading] = useState(false)
-  const { showAchievement } = useFlashMessage()
 
   const handleJoin = async () => {
     if (!gameId.trim()) {
@@ -24,31 +22,8 @@ export default function JoinGame() {
     
     const trimmedId = gameId.trim()
 
-    // Débloquer le succès de rejoindre une partie (meilleure UX si ça échoue en silence)
-    try {
-      const res = await fetch('/api/achievements/unlock', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ achievementId: 'join_game' }),
-      })
-
-      if (res.ok) {
-        const json = await res.json().catch(() => null)
-        if (json?.achievement) {
-          showAchievement(json.achievement)
-          // Attendre un peu pour laisser le flash s'afficher avant la redirection
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
-      }
-    } catch (e) {
-      console.warn('[JOIN] Impossible de débloquer le succès join_game:', e)
-    }
-
     // On redirige simplement vers la page de jeu
-    // Le composant de la page vérifiera si la partie existe
+    // La page de jeu centralise désormais le succès "join_game"
     router.push(`/game/${trimmedId}`)
   }
 

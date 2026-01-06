@@ -62,9 +62,13 @@ export function useCheckAchievements({
             (myPlayer.scoreSheet.sixes || 0) >=
           63
 
-        // Calculer les stats à jour en utilisant les données de la partie
-        // Pour nombre_yams_realises, on utilise le total + ceux de cette partie
-        // (on suppose que les stats ont été sauvegardées ou vont l'être)
+        // Calculer les stats AVANT cette partie (pour les achievements qui vérifient l'état précédent)
+        // On utilise les stats actuelles du profil, car elles n'ont pas encore été mises à jour
+        // pour cette partie (ou viennent d'être mises à jour, donc on doit les déduire)
+        const partiesJoueesAvant = Math.max(0, userProfile.parties_jouees - 1)
+        const partiesGagneesAvant = userProfile.parties_gagnees - (isWinner ? 1 : 0)
+        
+        // Calculer les stats après cette partie (pour les achievements basés sur les totaux)
         const nombreYamsRealises = userProfile.nombre_yams_realises + yamsCount
         const partiesGagnees = userProfile.parties_gagnees + (isWinner ? 1 : 0)
         const partiesJouees = userProfile.parties_jouees + 1
@@ -89,10 +93,14 @@ export function useCheckAchievements({
             serie_victoires_actuelle: serieVictoiresApresPartie,
             level: userProfile.level,
             parties_jouees: partiesJouees,
+            // Stats AVANT cette partie (pour loose_game notamment)
+            parties_jouees_avant: partiesJoueesAvant,
+            parties_gagnees_avant: partiesGagneesAvant,
           },
           gameData: {
             score: myPlayer.totalScore,
             won: isWinner,
+            abandoned: myPlayer.abandoned,
             yamsCount,
             yamsByFace,
             variant: gameState.variant,

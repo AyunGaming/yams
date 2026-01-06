@@ -94,13 +94,33 @@ export async function checkAndUnlockAchievements(
       },
       {
         id: 'loose_game',
-        check: () =>
-          !context.gameData.won &&
+        check: () => {
+          // Ne pas débloquer si le joueur a abandonné (ce n'est pas une défaite)
+          if (context.gameData.abandoned) {
+            return false
+          }
+          
+          // Ne pas débloquer si le joueur a gagné
+          if (context.gameData.won) {
+            return false
+          }
+          
           // Première défaite : avant cette partie, aucune défaite
           // => parties_jouees_avant === parties_gagnees_avant
-          // avec parties_jouees_avant = parties_jouees - 1
-          context.userProfile.parties_jouees - 1 === context.userProfile.parties_gagnees &&
-          !unlockedIds.has('loose_game'),
+          // On utilise les stats AVANT cette partie si disponibles, sinon on les calcule
+          const partiesJoueesAvant = context.userProfile.parties_jouees_avant ?? 
+            Math.max(0, context.userProfile.parties_jouees - 1)
+          const partiesGagneesAvant = context.userProfile.parties_gagnees_avant ?? 
+            (context.userProfile.parties_gagnees - (context.gameData.won ? 1 : 0))
+          
+          // Première défaite si :
+          // - C'est la première partie (parties_jouees_avant === 0) ET c'est une défaite
+          // - OU toutes les parties précédentes étaient des victoires (parties_jouees_avant === parties_gagnees_avant > 0)
+          return (
+            (partiesJoueesAvant === 0 || partiesJoueesAvant === partiesGagneesAvant) &&
+            !unlockedIds.has('loose_game')
+          )
+        },
       },
       {
         id: 'champion',
