@@ -32,14 +32,25 @@ export async function POST(request: NextRequest) {
     })
 
     const baseUrl = request.nextUrl.origin
-    const confirmationUrl = `${baseUrl}/auth/confirm?token=${encodeURIComponent(
+    // IMPORTANT :
+    // La route de confirmation est une route API située sous /api/auth/confirm (voir src/app/api/auth/confirm/route.ts).
+    // Il faut donc générer un lien vers /api/auth/confirm et non /auth/confirm,
+    // sinon l'utilisateur arrive sur une page inexistante et obtient une 404.
+    const confirmationUrl = `${baseUrl}/api/auth/confirm?token=${encodeURIComponent(
       emailVerificationToken
     )}`
 
-    await sendConfirmationEmail({
-      to: authUser.email,
-      confirmationUrl,
-    })
+    // Envoyer l'email de confirmation (ne pas faire échouer la requête si l'email échoue)
+    try {
+      await sendConfirmationEmail({
+        to: authUser.email,
+        confirmationUrl,
+      })
+    } catch (error) {
+      console.error('Erreur envoi email (compte créé quand même):', error)
+      // Ne pas faire échouer la requête si l'email échoue
+      // L'utilisateur peut toujours vérifier son email plus tard
+    }
 
     return NextResponse.json(
       {

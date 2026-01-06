@@ -119,7 +119,8 @@ export async function registerUser(params: RegisterParams): Promise<{
     .insert({
       id: userId,
       username,
-      avatar_url: '',
+      // Générer le même type d'avatar par défaut que dans la migration SQL (Dicebear basé sur l'id)
+      avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
       parties_jouees: 0,
       parties_gagnees: 0,
       parties_abandonnees: 0,

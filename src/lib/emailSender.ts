@@ -20,7 +20,7 @@ function createTransport() {
     return null
   }
 
-  return nodemailer.createTransport({
+  const transport = nodemailer.createTransport({
     host: SMTP_HOST,
     port: SMTP_PORT,
     secure: SMTP_PORT === 465,
@@ -28,7 +28,12 @@ function createTransport() {
       user: SMTP_USER,
       pass: SMTP_PASS,
     },
+    // Options de debug pour voir ce qui se passe
+    debug: process.env.NODE_ENV === 'development',
+    logger: process.env.NODE_ENV === 'development',
   })
+
+  return transport
 }
 
 export async function sendConfirmationEmail(params: {
@@ -37,6 +42,11 @@ export async function sendConfirmationEmail(params: {
 }) {
   const transport = createTransport()
   const { to, confirmationUrl } = params
+
+  // Logger la configuration SMTP (sans le mot de passe)
+  if (transport) {
+    console.log(`📧 Configuration SMTP: ${SMTP_HOST}:${SMTP_PORT}, utilisateur: ${SMTP_USER}, from: ${SMTP_FROM}`)
+  }
 
   const subject = 'Confirme ton inscription à Yams Online'
   const text = `Bienvenue sur Yams Online !
@@ -67,6 +77,7 @@ Si tu n'es pas à l'origine de cette inscription, tu peux ignorer cet email.`
 
   // Mode "fallback": si pas de SMTP, log en console
   if (!transport) {
+    console.warn('⚠️ SMTP non configuré. Les emails seront simplement logués en console.')
     console.log('📧 [DEV] Email de confirmation (non envoyé - SMTP non configuré)')
     console.log('To:', to)
     console.log('Subject:', subject)
@@ -74,13 +85,50 @@ Si tu n'es pas à l'origine de cette inscription, tu peux ignorer cet email.`
     return
   }
 
-  await transport.sendMail({
-    from: SMTP_FROM,
-    to,
-    subject,
-    text,
-    html,
-  })
+  try {
+    // Vérifier la connexion SMTP avant d'envoyer
+    console.log(`🔍 Vérification de la connexion SMTP (${SMTP_HOST}:${SMTP_PORT})...`)
+    await transport.verify()
+    console.log(`✅ Connexion SMTP vérifiée avec succès`)
+
+    // Envoyer l'email
+    const info = await transport.sendMail({
+      from: SMTP_FROM,
+      to,
+      subject,
+      text,
+      html,
+    })
+
+    console.log(`✅ Email de confirmation envoyé à ${to}`)
+    console.log(`📧 Message ID: ${info.messageId || 'Non fourni'}`)
+    console.log(`📧 Réponse du serveur: ${info.response || 'Aucune réponse'}`)
+    console.log(`📧 Accepted: ${info.accepted?.join(', ') || 'Aucun'}`)
+    console.log(`📧 Rejected: ${info.rejected?.join(', ') || 'Aucun'}`)
+    
+    // Vérifications supplémentaires
+    if (!info.messageId) {
+      console.warn('⚠️ Attention: Le serveur SMTP n\'a pas retourné de messageId. L\'email pourrait ne pas avoir été envoyé.')
+    }
+    
+    if (info.rejected && info.rejected.length > 0) {
+      console.error(`❌ L'adresse email ${to} a été rejetée par le serveur SMTP`)
+    }
+    
+    if (info.accepted && info.accepted.length === 0) {
+      console.error(`❌ Aucune adresse email n'a été acceptée par le serveur SMTP`)
+    }
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'envoi de l\'email de confirmation:', error)
+    if (error instanceof Error) {
+      console.error('❌ Détails de l\'erreur:', error.message)
+      if ('code' in error) {
+        console.error('❌ Code d\'erreur:', error.code)
+      }
+    }
+    // Ne pas throw pour ne pas faire échouer la création du compte
+    // L'utilisateur peut toujours vérifier son email plus tard
+  }
 }
 
 export async function sendPasswordResetEmail(params: {
@@ -89,6 +137,11 @@ export async function sendPasswordResetEmail(params: {
 }) {
   const transport = createTransport()
   const { to, resetUrl } = params
+
+  // Logger la configuration SMTP (sans le mot de passe)
+  if (transport) {
+    console.log(`📧 Configuration SMTP: ${SMTP_HOST}:${SMTP_PORT}, utilisateur: ${SMTP_USER}, from: ${SMTP_FROM}`)
+  }
 
   const subject = 'Réinitialisation de ton mot de passe Yams Online'
   const text = `Tu as demandé à réinitialiser ton mot de passe Yams Online.
@@ -118,6 +171,7 @@ Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.`
   `
 
   if (!transport) {
+    console.warn('⚠️ SMTP non configuré. Les emails seront simplement logués en console.')
     console.log('📧 [DEV] Email de reset de mot de passe (non envoyé - SMTP non configuré)')
     console.log('To:', to)
     console.log('Subject:', subject)
@@ -125,13 +179,49 @@ Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.`
     return
   }
 
-  await transport.sendMail({
-    from: SMTP_FROM,
-    to,
-    subject,
-    text,
-    html,
-  })
+  try {
+    // Vérifier la connexion SMTP avant d'envoyer
+    console.log(`🔍 Vérification de la connexion SMTP (${SMTP_HOST}:${SMTP_PORT})...`)
+    await transport.verify()
+    console.log(`✅ Connexion SMTP vérifiée avec succès`)
+
+    // Envoyer l'email
+    const info = await transport.sendMail({
+      from: SMTP_FROM,
+      to,
+      subject,
+      text,
+      html,
+    })
+
+    console.log(`✅ Email de réinitialisation envoyé à ${to}`)
+    console.log(`📧 Message ID: ${info.messageId || 'Non fourni'}`)
+    console.log(`📧 Réponse du serveur: ${info.response || 'Aucune réponse'}`)
+    console.log(`📧 Accepted: ${info.accepted?.join(', ') || 'Aucun'}`)
+    console.log(`📧 Rejected: ${info.rejected?.join(', ') || 'Aucun'}`)
+    
+    // Vérifications supplémentaires
+    if (!info.messageId) {
+      console.warn('⚠️ Attention: Le serveur SMTP n\'a pas retourné de messageId. L\'email pourrait ne pas avoir été envoyé.')
+    }
+    
+    if (info.rejected && info.rejected.length > 0) {
+      console.error(`❌ L'adresse email ${to} a été rejetée par le serveur SMTP`)
+    }
+    
+    if (info.accepted && info.accepted.length === 0) {
+      console.error(`❌ Aucune adresse email n'a été acceptée par le serveur SMTP`)
+    }
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'envoi de l\'email de réinitialisation:', error)
+    if (error instanceof Error) {
+      console.error('❌ Détails de l\'erreur:', error.message)
+      if ('code' in error) {
+        console.error('❌ Code d\'erreur:', error.code)
+      }
+    }
+    // Ne pas throw pour ne pas faire échouer la demande de reset
+  }
 }
 
 

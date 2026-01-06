@@ -1,8 +1,10 @@
 'use client';
 
 import { ThemeProvider } from "next-themes"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useMemo } from "react"
 import { UserProfile } from "@/types/user"
+import { createClient } from "@/lib/supabase/browser"
+import { SupabaseClient } from "@supabase/supabase-js"
 
 type AuthUser = {
   id: string
@@ -14,6 +16,7 @@ type SupabaseContextType = {
   userProfile: UserProfile | null
   isLoading: boolean
   refreshUserProfile: () => Promise<void>
+  supabase: SupabaseClient
 }
 
 const AUTH_ME_CACHE_KEY = 'yams_auth_me_cache'
@@ -33,6 +36,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  
+  // Créer le client Supabase une seule fois
+  const supabase = useMemo(() => createClient(), [])
 
   const readCachedAuthAndProfile = () => {
     if (typeof window === 'undefined') return null
@@ -126,7 +132,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <SupabaseContext.Provider value={{ user, userProfile, isLoading, refreshUserProfile }}>
+    <SupabaseContext.Provider value={{ user, userProfile, isLoading, refreshUserProfile, supabase }}>
       <ThemeProvider 
         attribute="data-theme" 
         defaultTheme="yams" 
