@@ -11,5 +11,5 @@ export const LEVELING_BASE = 10
 /**
  * Paramètre de croissance pour le calcul du level
  */
-export const LEVELING_GROWTH = 1.05
+export const LEVELING_GROWTH = 1.15
 
