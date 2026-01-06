@@ -3,6 +3,8 @@ import "./globals.css"
 import Navbar from "@/components/Navbar"
 import Providers from "@/components/Providers"
 import { GameProtectionProvider } from "@/contexts/GameProtectionContext"
+import { FlashMessageProvider } from "@/contexts/FlashMessageContext"
+import FlashMessages from "@/components/FlashMessages"
 
 export const metadata: Metadata = {
   title: "Yams Tour par Tour",
@@ -34,10 +36,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen bg-base-100 text-base-content">
         <Providers>
-          <GameProtectionProvider>
-            <Navbar />
-            <main className="max-w-6xl mx-auto p-4">{children}</main>
-          </GameProtectionProvider>
+          <FlashMessageProvider>
+            <GameProtectionProvider>
+              <Navbar />
+              <main className="max-w-6xl mx-auto p-4">{children}</main>
+              <FlashMessages />
+            </GameProtectionProvider>
+          </FlashMessageProvider>
         </Providers>
       </body>
     </html>

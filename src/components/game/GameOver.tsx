@@ -9,6 +9,7 @@ import { GameState } from '@/types/game'
 import { Socket } from 'socket.io-client'
 import { useSupabase } from '@/components/Providers'
 import { useSaveGameStats } from '@/hooks/useSaveGameStats'
+import { useCheckAchievements } from '@/hooks/useCheckAchievements'
 import FinalLeaderboard from './FinalLeaderboard'
 import GameOverActions from './GameOverActions'
 
@@ -59,6 +60,14 @@ export default function GameOver({ gameState, mySocketId, socket, amIHost }: Gam
     user: userProfile ? { id: userProfile.id } : null,
     isWinner,
     refreshUserProfile,
+  })
+
+  // Vérifier et débloquer les achievements
+  useCheckAchievements({
+    gameState,
+    mySocketId,
+    userProfile,
+    isWinner,
   })
 
   return (

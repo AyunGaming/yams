@@ -7,10 +7,13 @@ import { useState } from 'react'
 import { GameVariant } from '@/types/game'
 import { VARIANT_NAMES, VARIANT_DESCRIPTIONS } from '@/lib/variantLogic'
 import PlusIcon from './icons/PlusIcon'
+import { api } from '@/lib/apiClient'
+import { useFlashMessage } from '@/contexts/FlashMessageContext'
 
 export default function CreateGame() {
   const router = useRouter()
   const { user } = useSupabase()
+  const { showAchievement } = useFlashMessage()
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState<GameVariant>('classic')
@@ -37,24 +40,44 @@ export default function CreateGame() {
 
     try {
       console.log('[CREATE] 5. Appel API /api/games...')
-      const response = await fetch('/api/games', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id, variant: selectedVariant }),
+      const { data, error } = await api.post<{ game: { id: string } }>('/api/games', {
+        id,
+        variant: selectedVariant,
       })
 
-      const data = await response.json()
+      console.log('[CREATE] 6. Réponse API /api/games:', { error, data })
 
-      console.log('[CREATE] 6. Réponse API /api/games:', { status: response.status, data })
-
-      if (!response.ok) {
-        console.error('[CREATE] ❌ Erreur API:', data)
+      if (error) {
+        console.error('[CREATE] ❌ Erreur API:', error)
         setLoading(false)
         console.log('[CREATE] 7. Loading désactivé')
-        alert(`Erreur lors de la création de la partie: ${data.error || 'Erreur inconnue'}`)
+        alert(`Erreur lors de la création de la partie: ${error || 'Erreur inconnue'}`)
       } else {
+        // Débloquer les succès d'action liés à la création de partie
+        try {
+          const res = await fetch('/api/achievements/unlock', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ achievementId: 'create_game' }),
+          })
+
+          if (res.ok) {
+            const json = await res.json().catch(() => null)
+            if (json?.achievement) {
+              showAchievement(json.achievement)
+            }
+          }
+
+          // Si la partie créée est privée, débloquer aussi create_private_game
+          // L'information de confidentialité sera ajoutée plus tard. (friend system)
+          // Pour l'instant, on ne débloque que create_game.
+        } catch (unlockError) {
+          console.warn('[CREATE] Impossible de débloquer le succès create_game:', unlockError)
+        }
+
         console.log('[CREATE] ✅ Partie créée! Redirection...')
         setShowModal(false)
         await new Promise(resolve => setTimeout(resolve, 200))

@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 interface Params {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function GET(_request: NextRequest, { params }: Params) {
-  const { id } = params
+  const { id } = await params
 
   const supabase = createAdminClient()
   if (!supabase) {

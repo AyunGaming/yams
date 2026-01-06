@@ -191,34 +191,6 @@ export default function UserProfile({ detailed = true, userId }: UserProfileProp
                 </div>
               </div>
             )}
-
-            {/* Badges / Achievements */}
-            <div className="mt-4">
-              <h3 className="font-semibold mb-2">🏆 Accomplissements</h3>
-              <div className="flex flex-wrap gap-2">
-                {profile.parties_jouees >= 1 && (
-                  <div className="badge badge-primary">Première partie</div>
-                )}
-                {profile.parties_gagnees >= 1 && (
-                  <div className="badge badge-success">Première victoire</div>
-                )}
-                {profile.parties_gagnees >= 10 && (
-                  <div className="badge badge-success">10 victoires</div>
-                )}
-                {profile.nombre_yams_realises >= 1 && (
-                  <div className="badge badge-secondary">Premier Yams</div>
-                )}
-                {profile.meilleur_score >= 200 && (
-                  <div className="badge badge-warning">Score de légende</div>
-                )}
-                {profile.meilleure_serie_victoires >= 3 && (
-                  <div className="badge badge-error">Série de 3+</div>
-                )}
-                {tauxVictoire >= 50 && profile.parties_jouees >= 10 && (
-                  <div className="badge badge-accent">Champion</div>
-                )}
-              </div>
-            </div>
           </>
         )}
       </div>

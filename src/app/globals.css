@@ -169,6 +169,11 @@ textarea {
   transform: translateY(-2px);
 }
 
+/* Carte sans effet de déplacement (pour certaines modales/overlays) */
+.card-no-hover:hover {
+  transform: none !important;
+}
+
 /* Boutons */
 .btn {
   @apply font-medium transition-all duration-200;
@@ -346,6 +351,17 @@ table tbody tr:hover {
     }
   }
 
+  @keyframes slide-in-right {
+    0% {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
   .animate-slide-down {
     animation: slide-down 0.6s ease-out forwards;
   }
@@ -374,10 +390,43 @@ table tbody tr:hover {
     border-radius: 50% !important;
     aspect-ratio: 1 / 1 !important;
   }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.5s ease-out forwards;
+  }
 }
 
 /* Classes utilitaires réutilisables */
 @layer components {
+  /* Animation de flip pour les médailles d'achievements */
+  .medal-flip-scene {
+    perspective: 1200px;
+  }
+
+  .medal-flip-card {
+    position: relative;
+    width: 80vw;
+    max-width: 420px;
+    aspect-ratio: 1 / 1;
+    transform-style: preserve-3d;
+    transition: transform 1s ease;
+  }
+
+  .medal-flip-card.is-flipped {
+    transform: rotateY(180deg);
+  }
+
+  .medal-flip-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .medal-flip-back {
+    transform: rotateY(180deg);
+  }
+
   /* Carte avec bordure hover */
   .card-border-hover {
     @apply card border shadow-xl transition-all duration-300;

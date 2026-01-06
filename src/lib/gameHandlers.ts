@@ -5,6 +5,7 @@
 
 import { Socket } from 'socket.io-client'
 import { ScoreCategory, GameState } from '@/types/game'
+import { api } from '@/lib/apiClient'
 
 /**
  * Démarre la partie
@@ -30,6 +31,19 @@ export function handleLeaveGame(
       // Si la partie est démarrée, c'est un abandon
       // Émettre l'événement et attendre un peu pour qu'il soit traité par le serveur
       socket.emit('abandon_game', roomId)
+
+      // Débloquer le succès "abandonner une partie" en arrière-plan
+      fetch('/api/achievements/unlock', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ achievementId: 'give_up' }),
+      }).catch((e) => {
+        console.warn('[GAME] Impossible de débloquer le succès give_up:', e)
+      })
+
       // Laisser 100ms pour que l'événement arrive au serveur avant de déconnecter
       setTimeout(() => {
         socket.disconnect()

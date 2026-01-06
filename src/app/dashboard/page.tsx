@@ -8,6 +8,7 @@ import CreateGame from '@/components/CreateGame'
 import JoinGame from '@/components/JoinGame'
 import UserProfile from '@/components/UserProfile'
 import GameHistory from '@/components/GameHistory'
+import RecentAchievements from '@/components/RecentAchievements'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -45,6 +46,9 @@ export default function DashboardPage() {
       
       {/* Profil utilisateur */}
       <UserProfile detailed={true} />
+
+      {/* Derniers achievements */}
+      <RecentAchievements />
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-3xl md:text-4xl font-display font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent flex items-center gap-3">
