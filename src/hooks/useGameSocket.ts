@@ -124,6 +124,15 @@ export function useGameSocket({
         saveServerRestartId(restartId)
       })
 
+      // Gérer la détection de redémarrage serveur
+      newSocket.on('server_restart_detected', (data: { message: string; newServerRestartId: string }) => {
+        logger.warn('Redémarrage serveur détecté:', data.message)
+        // Mettre à jour l'ID dans le localStorage
+        saveServerRestartId(data.newServerRestartId)
+        // La connexion est déjà établie, donc on continue normalement
+        // Le client peut continuer à utiliser la connexion existante
+      })
+
       // Connexion réussie
       newSocket.on('connect', () => {
         isConnectingRef.current = false

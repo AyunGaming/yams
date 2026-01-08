@@ -40,9 +40,12 @@ export async function fetchAuthToken(): Promise<string | null> {
 
 /**
  * Récupère l'ID de session serveur depuis localStorage
+ * Retourne null si la valeur est absente ou vide
  */
 export function getServerRestartId(): string | null {
-  return localStorage.getItem('serverRestartId')
+  const id = localStorage.getItem('serverRestartId')
+  // Retourner null si la valeur est absente ou vide (chaîne vide)
+  return id && id.trim() !== '' ? id : null
 }
 
 /**
