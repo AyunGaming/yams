@@ -1,7 +1,7 @@
 'use client'
 import Link from "next/link"
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { useSupabase } from "@/components/Providers"
@@ -12,6 +12,7 @@ import { GameVariant } from "@/types/game"
 import { VARIANT_NAMES, VARIANT_DESCRIPTIONS } from "@/lib/variantLogic"
 import ThemeToggle from "./ThemeToggle"
 import PlusIcon from "./icons/PlusIcon"
+import { useTheme } from "next-themes"
 
 export default function Navbar() {
   const { user, userProfile, refreshUserProfile } = useSupabase()
@@ -24,6 +25,18 @@ export default function Navbar() {
   const [selectedVariant, setSelectedVariant] = useState<GameVariant>('classic')
   const router = useRouter()
   const { isInActiveGame, handleAbandonBeforeNavigation } = useGameProtection()
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const handleThemeToggle = () => {
+    const newTheme = theme === "yams-dark" ? "yams" : "yams-dark"
+    setTheme(newTheme)
+    document.documentElement.setAttribute('data-theme', newTheme)
+  }
 
   const handleLogout = async () => {
     setLoading(true)
@@ -148,11 +161,11 @@ export default function Navbar() {
   }
 
   return (
-    <div className="navbar bg-base-200/95 backdrop-blur-md shadow-lg border-b border-base-300 sticky top-0 z-50">
-      <div className="flex-1 flex items-center gap-4 min-w-0">
+    <div className="navbar bg-base-200/95 backdrop-blur-md shadow-lg border-b border-base-300 sticky top-0 z-50 lg:relative">
+      <div className="flex-1 flex items-center gap-2 md:gap-3 lg:gap-4 min-w-0">
         <Link 
           href="/" 
-          className="btn btn-ghost normal-case text-xl md:text-2xl font-display font-bold flex-shrink-0 gap-2 hover:bg-primary/10 transition-all"
+          className="btn btn-ghost normal-case text-xl md:text-2xl font-display font-bold flex-shrink-0 gap-2 hover:bg-primary/10 transition-all max-[430px]:px-2"
           onClick={(e) => handleNavigation(e, '/')}
         >
           <svg 
@@ -168,13 +181,13 @@ export default function Navbar() {
               <path d="M27.111 8.247l-9.531-5.514c-0.895-0.518-2.346-0.518-3.241 0l-9.531 5.514c-0.61 0.353-0.804 0.856-0.582 1.304l11.291 6.447c0.27 0.031 0.548 0.033 0.819 0.007l11.385-6.515c0.176-0.432-0.026-0.906-0.609-1.243zM17.397 9.982c-0.779 0.462-2.041 0.462-2.82 0s-0.779-1.211 0-1.673 2.041-0.462 2.82 0c0.779 0.462 0.779 1.211 0 1.673zM27.424 10.14l-10.366 5.932c-0.365 0.36-0.669 0.831-0.861 1.322v11.721c0.281 0.394 0.803 0.467 1.401 0.122l9.168-5.294c0.895-0.517 1.621-1.774 1.621-2.808v-9.84c0-0.763-0.396-1.191-0.963-1.155zM20.092 17.199c0.002 0.861-0.626 1.923-1.401 2.372s-1.405 0.116-1.407-0.745c0-0.002 0-0.004 0-0.006-0.002-0.861 0.626-1.923 1.401-2.372s1.405-0.116 1.407 0.745c0 0.002 0 0.004 0 0.006zM27.081 20.821c0.002 0.861-0.626 1.923-1.401 2.372s-1.405 0.116-1.407-0.745c0-0.002 0-0.004 0-0.006-0.002-0.861 0.626-1.923 1.401-2.372s1.405-0.116 1.407 0.745c0 0.002 0 0.004 0 0.006zM15.645 17.134c-0.165-0.345-0.383-0.671-0.635-0.944l-10.597-6.051c-0.504 0.027-0.846 0.446-0.846 1.156v9.84c0 1.034 0.726 2.291 1.621 2.808l9.168 5.294c0.525 0.303 0.992 0.284 1.289 0.008v-12.111h-0zM7.682 14.791c-0.002 0.861-0.631 1.194-1.407 0.745s-1.403-1.511-1.401-2.372c0-0.002 0-0.004 0-0.006 0.002-0.861 0.631-1.194 1.407-0.745s1.403 1.511 1.401 2.372c0 0.002 0 0.004 0 0.006zM11.176 20.615c-0.002 0.861-0.631 1.194-1.407 0.745s-1.403-1.511-1.401-2.372c0-0.002 0-0.004 0-0.006 0.002-0.861 0.631-1.194 1.407-0.745s1.403 1.511 1.401 2.372c0 0.002 0 0.004 0 0.006zM14.671 26.483c-0.002 0.861-0.631 1.194-1.407 0.745s-1.403-1.511-1.401-2.372c0-0.002 0-0.004 0-0.006 0.002-0.861 0.631-1.194 1.407-0.745s1.403 1.511 1.401 2.372c0 0.002 0 0.004 0 0.006z"></path>
             </g>
           </svg>
-          <span className="navbar-logo-text">Yams</span>
+          <span className="navbar-logo-text max-[830px]:hidden">Yams</span>
         </Link>
 
         {/* Zone création + rejoindre une partie - entre le nom du site et le menu */}
         {user && (
-          <div className="flex-1 flex justify-center min-w-0">
-            <div className="flex items-center gap-2 w-full max-w-xl">
+          <div className="flex-1 flex justify-center min-w-0 max-w-2xl lg:absolute lg:left-1/2 lg:-translate-x-1/2">
+            <div className="flex items-center gap-1 md:gap-2 w-full max-w-lg lg:max-w-xl">
               {/* Bouton créer une partie - visible seulement sur desktop */}
               <button
                 type="button"
@@ -187,7 +200,7 @@ export default function Navbar() {
               </button>
               {/* Séparateur visuel entre création et jointure */}
               <div className="hidden md:block h-6 w-px bg-neutral/40 dark:bg-neutral/60" />
-              <div className="flex items-center gap-0 w-full max-w-xs">
+              <div className="flex items-center gap-0 w-full max-w-[280px] lg:max-w-xs">
                 <button
                   type="button"
                   className="input input-sm input-bordered rounded-r-none w-10 px-0 flex items-center justify-center cursor-pointer hover:bg-base-200 transition-colors input-no-focus"
@@ -211,8 +224,16 @@ export default function Navbar() {
                   className="btn btn-sm btn-secondary whitespace-nowrap rounded-l-none"
                   onClick={handleJoinGame}
                   disabled={joinLoading || !joinCode.trim()}
+                  title="Rejoindre la partie"
                 >
-                  {joinLoading ? "..." : "Rejoindre"}
+                  {joinLoading ? (
+                    "..."
+                  ) : (
+                    <>
+                      <span className="max-[430px]:hidden">Rejoindre</span>
+                      <span className="min-[431px]:hidden">→</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -220,8 +241,10 @@ export default function Navbar() {
         )}
       </div>
 
-      <div className="flex-none flex items-center gap-2">
-        <ThemeToggle />
+      <div className="flex-none flex items-center gap-2 max-[430px]:px-2">
+        <div className="max-[430px]:hidden">
+          <ThemeToggle />
+        </div>
 
         {/* Menu desktop */}
         <div className="hidden md:flex items-center gap-2">
@@ -320,6 +343,18 @@ export default function Navbar() {
                 <span>Créer une partie</span>
                     </button>
                   </li>
+                  {mounted && (
+                    <li className="max-[430px]:block hidden">
+                      <button
+                        type="button"
+                        onClick={handleThemeToggle}
+                        className="w-full text-left"
+                      >
+                        {theme === "yams-dark" ? "☀️" : "🌙"}
+                        <span>{theme === "yams-dark" ? "Thème clair" : "Thème sombre"}</span>
+                      </button>
+                    </li>
+                  )}
                   <li>
                     <Link
                       href="/leaderboard"
@@ -344,6 +379,18 @@ export default function Navbar() {
                 </>
               ) : (
                 <>
+                  {mounted && (
+                    <li className="max-[430px]:block hidden">
+                      <button
+                        type="button"
+                        onClick={handleThemeToggle}
+                        className="w-full text-left"
+                      >
+                        {theme === "yams-dark" ? "☀️" : "🌙"}
+                        <span>{theme === "yams-dark" ? "Thème clair" : "Thème sombre"}</span>
+                      </button>
+                    </li>
+                  )}
                   <li>
                     <Link href="/login" onClick={() => setIsMenuOpen(false)}>
                       Connexion

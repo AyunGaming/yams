@@ -70,11 +70,11 @@ export default function GameHistory() {
 
   if (loading) {
     return (
-      <div className="card-backdrop">
-        <div className="card-body">
-          <h2 className="card-title">📜 Historique des parties</h2>
-          <div className="flex justify-center py-8">
+      <div className="card bg-base-100 shadow-xl border border-base-300">
+        <div className="card-body p-6">
+          <div className="text-center">
             <span className="loading loading-spinner loading-lg"></span>
+            <p className="mt-4">Chargement de l&apos;historique...</p>
           </div>
         </div>
       </div>
@@ -82,35 +82,95 @@ export default function GameHistory() {
   }
 
   return (
-    <div className="card bg-base-200/95 backdrop-blur-md border border-base-300">
-      <div className="card-body">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="card-title">📜 Historique des parties</h2>
-          {games.length > 0 && (
-            <span className="badge badge-primary">{games.length} / 10</span>
-          )}
-        </div>
+    <div className="card bg-base-100 shadow-xl border border-base-300">
+      <div className="card-body p-4 md:p-6 lg:p-4 xl:p-6">
+        <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">📜 Historique des parties</h2>
 
-        {games.length === 0 ? (
-          <p className="text-base-content/70 text-center py-8">
+      {games.length === 0 ? (
+        <div className="alert alert-info">
+          <span>
             Aucune partie terminée pour le moment.
             <br />
             Jouez votre première partie !
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="table w-full">
+          </span>
+        </div>
+      ) : (
+        <>
+          {/* Version mobile et tablette : cartes */}
+          <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3 max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto">
+            {games.map((g) => {
+              const myPlayerData = g.players_scores && g.players_scores.length > 0
+                ? g.players_scores.find((p: PlayerScore) => p.user_id === user?.id)
+                : null
+              
+              const myScore = myPlayerData?.score ?? 'N/A'
+              const iAbandoned = myPlayerData?.abandoned ?? false
+              
+              const iWon = g.winner === user?.email || 
+                           (myPlayerData && g.winner === myPlayerData.name)
+              
+              const variant = g.variant || 'classic'
+              const variantName = VARIANT_NAMES[variant]
+              
+              return (
+                <div
+                  key={g.id}
+                  className={`card bg-base-100 shadow-xl border border-base-300 ${
+                    iAbandoned ? 'opacity-60' : ''
+                  } ${iWon ? 'ring-2 ring-success' : ''}`}
+                >
+                  <div className="card-body p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="font-bold text-lg mb-1">
+                          {iWon ? '🏆 Vous avez gagné' : iAbandoned ? 'Abandonné' : 'Partie terminée'}
+                        </div>
+                        <div className={`text-sm ${iAbandoned ? 'text-base-content' : 'text-base-content/70'}`}>
+                          {new Date(g.created_at).toLocaleDateString('fr-FR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                      </div>
+                      <span className="badge badge-neutral badge-sm">
+                        {variantName}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-base-content/70">Votre score</span>
+                        <span className="font-bold text-primary">{myScore}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-base-content/70">Vainqueur</span>
+                        <span className="font-semibold">
+                          {iWon ? 'Vous' : g.winner || 'Inconnu'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Version desktop : tableau */}
+          <div className="hidden lg:block overflow-x-auto">
+            <table className="table w-full table-compact xl:table-normal">
               <thead>
                 <tr>
                   <th>Date</th>
                   <th>Variante</th>
-                  <th>Votre score</th>
+                  <th className="text-center">Votre score</th>
                   <th>Vainqueur</th>
                 </tr>
               </thead>
               <tbody>
                 {games.map((g) => {
-                  // Trouver le joueur (utilisateur) dans players_scores
                   const myPlayerData = g.players_scores && g.players_scores.length > 0
                     ? g.players_scores.find((p: PlayerScore) => p.user_id === user?.id)
                     : null
@@ -118,11 +178,9 @@ export default function GameHistory() {
                   const myScore = myPlayerData?.score ?? 'N/A'
                   const iAbandoned = myPlayerData?.abandoned ?? false
                   
-                  // Vérifier si l'utilisateur est le vainqueur
                   const iWon = g.winner === user?.email || 
                                (myPlayerData && g.winner === myPlayerData.name)
                   
-                  // Récupérer le nom de la variante (défaut : Classique si non défini)
                   const variant = g.variant || 'classic'
                   const variantName = VARIANT_NAMES[variant]
                   
@@ -130,10 +188,10 @@ export default function GameHistory() {
                     <tr 
                       key={g.id} 
                       className={`transition-colors hover:bg-base-300/50 ${
-                        iAbandoned ? 'opacity-60 abandoned-row' : ''
-                      }`}
+                        iAbandoned ? 'opacity-60' : ''
+                      } ${iWon ? 'bg-success/20 font-bold' : ''}`}
                     >
-                      <td>
+                      <td className={`text-sm xl:text-base ${iAbandoned ? '' : 'text-base-content/50'}`}>
                         {new Date(g.created_at).toLocaleDateString('fr-FR', {
                           year: 'numeric',
                           month: 'long',
@@ -143,26 +201,26 @@ export default function GameHistory() {
                         })}
                       </td>
                       <td>
-                        <span className={`badge badge-sm badge-neutral`}>
+                        <span className="badge badge-neutral badge-sm xl:badge-md w-full justify-center">
                           {variantName}
                         </span>
                       </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold">{myScore}</span>
+                      <td className="text-center">
+                        <div className="inline-grid grid-rows-[auto_auto] gap-1 justify-items-center">
+                          <span className="font-bold text-primary text-sm xl:text-base">
+                            {myScore}
+                          </span>
                           {iAbandoned && (
                             <span className="badge badge-warning badge-sm">Abandonné</span>
                           )}
                         </div>
                       </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          {iWon ? (
-                            <span className="text-success font-bold">🏆 Vous</span>
-                          ) : (
-                            <span>{g.winner || 'Inconnu'}</span>
-                          )}
-                        </div>
+                      <td className="text-sm xl:text-base">
+                        {iWon ? (
+                          <span className="text-success font-bold">🏆 Vous</span>
+                        ) : (
+                          <span>{g.winner || 'Inconnu'}</span>
+                        )}
                       </td>
                     </tr>
                   )
@@ -170,29 +228,17 @@ export default function GameHistory() {
               </tbody>
             </table>
           </div>
-        )}
+        </>
+      )}
 
-        {games.length > 0 && (
-          <div className="alert alert-info mt-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              className="stroke-current shrink-0 w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
-            </svg>
-            <span className="text-sm">
-              💡 Seules vos <strong>10 dernières parties</strong> sont affichées. 
-              Les parties abandonnées sont marquées d&apos;un badge &quot;Abandonné&quot;.
-            </span>
-          </div>
-        )}
+      {games.length > 0 && (
+        <div className="mt-4 md:mt-6 text-xs md:text-sm text-base-content/60">
+          <p>
+            💡 Seules vos <strong>10 dernières parties</strong> sont affichées. 
+            Les parties abandonnées sont marquées d&apos;un badge &quot;Abandonné&quot;.
+          </p>
+        </div>
+      )}
       </div>
     </div>
   )

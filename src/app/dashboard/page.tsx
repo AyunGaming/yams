@@ -42,7 +42,8 @@ export default function DashboardPage() {
   }
   
   return (
-    <div className="space-y-8 mt-6">
+    <div className="container mx-auto px-4 lg:px-3 xl:px-6 max-w-5xl lg:max-w-[calc(100%-1.5rem)] xl:max-w-6xl 2xl:max-w-7xl">
+      <div className="space-y-8 mt-6">
       
       {/* Profil utilisateur */}
       <UserProfile detailed={true} />
@@ -80,6 +81,7 @@ export default function DashboardPage() {
 
       {/* Historique des parties */}
       <GameHistory />
+      </div>
     </div>
   )
 }

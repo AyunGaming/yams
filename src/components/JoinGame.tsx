@@ -80,8 +80,16 @@ export default function JoinGame() {
         onClick={handleJoin}
         className="btn btn-secondary whitespace-nowrap rounded-l-none"
         disabled={loading || !gameId.trim()}
+        title="Rejoindre la partie"
       >
-        {loading ? 'Connexion...' : '🚪 Rejoindre'}
+        {loading ? (
+          'Connexion...'
+        ) : (
+          <>
+            <span className="max-[425px]:hidden">🚪 Rejoindre</span>
+            <span className="min-[426px]:hidden">→</span>
+          </>
+        )}
       </button>
     </div>
   )

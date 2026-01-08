@@ -52,13 +52,18 @@ export default function XPBar({ currentXp, currentLevel, size = 'md' }: XPBarPro
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <span className="font-semibold">Level {currentLevel}</span>
-          <span className="text-base-content/60">•</span>
-          <span className="text-base-content/70">
+          <span className="text-base-content/60 hidden md:inline">•</span>
+          <span className="text-base-content/70 hidden md:inline">
             {xpInCurrentLevel.toLocaleString()} / {xpNeededForNext.toLocaleString()} XP
           </span>
         </div>
-        <div className="text-base-content/60">
-          {currentXp.toLocaleString()} XP total
+        <div className="flex items-center gap-2">
+          <span className="text-base-content/70 text-sm md:hidden">
+            {xpInCurrentLevel.toLocaleString()} / {xpNeededForNext.toLocaleString()} XP
+          </span>
+          <span className="text-base-content/60 hidden md:block">
+            {currentXp.toLocaleString()} XP total
+          </span>
         </div>
       </div>
       
@@ -81,7 +86,7 @@ export default function XPBar({ currentXp, currentLevel, size = 'md' }: XPBarPro
       
       {/* Pourcentage si la barre est trop petite */}
       {progressPercent <= 15 && (
-        <div className="text-right mt-1 text-xs text-base-content/60">
+        <div className="text-right mt-1 text-xs text-base-content/60 hidden md:block">
           {Math.round(progressPercent)}% vers Level {currentLevel + 1}
         </div>
       )}

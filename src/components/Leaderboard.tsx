@@ -105,23 +105,23 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="card-backdrop p-4 md:p-6">
+    <div className="card-backdrop p-4 md:p-6 lg:p-4 xl:p-6">
       <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">🏆 Top 10 des meilleurs joueurs</h2>
 
-      {/* Version mobile : cartes */}
-      <div className="md:hidden space-y-3">
+      {/* Version mobile et tablette : cartes */}
+      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3 max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto">
         {leaderboardData.map((player, index) => {
           const position = index + 1
           const isCurrentUser = user?.id === player.id
           const isTop3 = position <= 3
-          
+
           // Styles pour le top 3
           const top3Styles = position === 1 
-            ? 'ring-2 ring-yellow-500 bg-gradient-to-br from-yellow-200/80 to-yellow-300/60 [data-theme="yams-dark"]:from-yellow-900/20 [data-theme="yams-dark"]:to-yellow-800/10 shadow-lg'
+            ? 'ring-2 ring-yellow-500/70 bg-yellow-700/30 shadow-lg'
             : position === 2
-            ? 'ring-2 ring-zinc-300 [data-theme="yams-dark"]:ring-slate-500 bg-gradient-to-br from-zinc-200/80 to-zinc-300/60 [data-theme="yams-dark"]:from-slate-700/60 [data-theme="yams-dark"]:to-slate-600/50 shadow-md'
+            ? 'ring-2 ring-zinc-300/60 bg-zinc-400/30 shadow-md'
             : position === 3
-            ? 'ring-2 ring-orange-500 bg-gradient-to-br from-orange-100/70 to-orange-200/50 [data-theme="yams-dark"]:from-orange-900/20 [data-theme="yams-dark"]:to-orange-800/10 shadow-md'
+            ? 'ring-2 ring-orange-500/60 bg-orange-900/30 shadow-md'
             : ''
 
           return (
@@ -135,7 +135,7 @@ export default function Leaderboard() {
             >
               <div className="card-body p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`${isTop3 ? 'text-4xl' : 'text-2xl'} flex-shrink-0`}>
+                  <div className={`${isTop3 ? 'text-4xl' : 'text-2xl'} flex-shrink-0 flex items-center justify-center w-12`}>
                     {getMedalEmoji(position)}
                   </div>
                   <div className="avatar flex-shrink-0">
@@ -217,7 +217,7 @@ export default function Leaderboard() {
             <div className="card-backdrop shadow-sm ring-2 ring-primary">
               <div className="card-body p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="text-2xl flex-shrink-0">
+                  <div className="text-2xl flex-shrink-0 flex items-center justify-center w-12">
                     {userRank}.
                   </div>
                   <div className="avatar flex-shrink-0">
@@ -290,18 +290,33 @@ export default function Leaderboard() {
       </div>
 
       {/* Version desktop : tableau */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="table w-full">
+      <div className="hidden lg:block overflow-x-auto">
+        <table className="table w-full table-compact xl:table-normal">
           <thead>
             <tr>
               <th className="text-center">Rang</th>
               <th>Joueur</th>
-              <th className="text-center">Parties jouées</th>
+              <th className="text-center">
+                <span className="xl:hidden">Parties</span>
+                <span className="hidden xl:inline">Parties jouées</span>
+              </th>
               <th className="text-center">Victoires</th>
-              <th className="text-center">Taux de victoire</th>
-              <th className="text-center">Meilleur score</th>
-              <th className="text-center">Série actuelle</th>
-              <th className="text-center">Yams réalisés</th>
+              <th className="text-center">
+                <span className="xl:hidden">Taux</span>
+                <span className="hidden xl:inline">Taux de victoire</span>
+              </th>
+              <th className="text-center lg:table-cell hidden">
+                <span className="xl:hidden">Score</span>
+                <span className="hidden xl:inline">Meilleur score</span>
+              </th>
+              <th className="text-center lg:table-cell hidden">
+                <span className="xl:hidden">Série</span>
+                <span className="hidden xl:inline">Série actuelle</span>
+              </th>
+              <th className="text-center lg:table-cell hidden">
+                <span className="xl:hidden">Yams</span>
+                <span className="hidden xl:inline">Yams réalisés</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -328,13 +343,15 @@ export default function Leaderboard() {
                     isCurrentUser && !isTop3 ? 'bg-primary/20 font-bold' : ''
                   }`}
                 >
-                  <td className={`text-center text-lg ${isTop3 ? 'text-2xl' : ''}`}>
-                    {getMedalEmoji(position)}
+                  <td className={`text-center text-sm xl:text-lg ${isTop3 ? 'xl:text-2xl' : ''} w-16`}>
+                    <div className="flex items-center justify-center w-full">
+                      {getMedalEmoji(position)}
+                    </div>
                   </td>
                   <td>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 xl:gap-3">
                       <div className="avatar">
-                        <div className="w-12 h-12 rounded-full relative overflow-hidden">
+                        <div className="w-8 h-8 xl:w-12 xl:h-12 rounded-full relative overflow-hidden">
                           {player.avatar_url ? (
                             <Image
                               src={player.avatar_url}
@@ -345,8 +362,8 @@ export default function Leaderboard() {
                               unoptimized
                             />
                           ) : (
-                            <div className="bg-neutral-focus text-neutral-content rounded-full w-12 h-12 flex items-center justify-center">
-                              <span className="text-xl">
+                            <div className="bg-neutral-focus text-neutral-content rounded-full w-full h-full flex items-center justify-center">
+                              <span className="text-sm xl:text-xl">
                                 {player.username.charAt(0).toUpperCase()}
                               </span>
                             </div>
@@ -354,41 +371,47 @@ export default function Leaderboard() {
                         </div>
                       </div>
                       <div>
-                        <div className="font-bold">
+                        <div className="font-bold text-sm xl:text-base">
                           {player.username}
                           {isCurrentUser && (
-                            <span className="ml-2 badge badge-primary badge-sm">Vous</span>
+                            <span className="ml-1 xl:ml-2 badge badge-primary badge-xs xl:badge-sm">Vous</span>
                           )}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="text-center">{player.parties_jouees}</td>
-                  <td className="text-center">{player.parties_gagnees}</td>
+                  <td className="text-center text-sm xl:text-base">{player.parties_jouees}</td>
+                  <td className="text-center text-sm xl:text-base">{player.parties_gagnees}</td>
                   <td className="text-center">
-                    <span className="badge badge-success">
+                    <span className="badge badge-success badge-sm xl:badge-md w-full justify-center">
                       {player.taux_victoire.toFixed(1)}%
                     </span>
                   </td>
-                  <td className="text-center font-bold text-primary">
+                  <td className="text-center font-bold text-primary text-sm xl:text-base lg:table-cell hidden">
                     {player.meilleur_score}
                   </td>
-                  <td className="text-center">
+                  <td className="text-center lg:table-cell hidden">
                     {player.serie_victoires_actuelle > 0 ? (
-                      <span className="badge badge-info">
-                        🔥 {player.serie_victoires_actuelle}
-                      </span>
+                      <>
+                        <span className="badge badge-info badge-sm w-full justify-center xl:hidden">{player.serie_victoires_actuelle}</span>
+                        <span className="hidden xl:inline-flex badge badge-info badge-md w-full justify-center">
+                          🔥 {player.serie_victoires_actuelle}
+                        </span>
+                      </>
                     ) : (
-                      <span className="text-base-content/50">0</span>
+                      <span className="text-base-content/50 text-sm xl:text-base">0</span>
                     )}
                   </td>
-                  <td className="text-center">
+                  <td className="text-center lg:table-cell hidden">
                     {player.nombre_yams_realises > 0 ? (
-                      <span className="badge badge-warning">
-                        🎲 {player.nombre_yams_realises}
-                      </span>
+                      <>
+                        <span className="badge badge-warning badge-sm w-full justify-center xl:hidden">{player.nombre_yams_realises}</span>
+                        <span className="hidden xl:inline-flex badge badge-warning badge-md w-full justify-center">
+                          🎲 {player.nombre_yams_realises}
+                        </span>
+                      </>
                     ) : (
-                      <span className="text-base-content/50">0</span>
+                      <span className="text-base-content/50 text-sm xl:text-base">0</span>
                     )}
                   </td>
                 </tr>
@@ -404,11 +427,15 @@ export default function Leaderboard() {
                   </td>
                 </tr>
                 <tr className="bg-primary/20 font-bold transition-colors hover:bg-primary/30">
-                  <td className="text-center text-lg">{userRank}.</td>
+                  <td className="text-center text-sm xl:text-lg w-16">
+                    <div className="flex items-center justify-center w-full">
+                      {userRank}.
+                    </div>
+                  </td>
                   <td>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 xl:gap-3">
                       <div className="avatar">
-                        <div className="w-12 h-12 rounded-full relative overflow-hidden">
+                        <div className="w-8 h-8 xl:w-12 xl:h-12 rounded-full relative overflow-hidden">
                           {userData.avatar_url ? (
                             <Image
                               src={userData.avatar_url}
@@ -419,8 +446,8 @@ export default function Leaderboard() {
                               unoptimized
                             />
                           ) : (
-                            <div className="bg-neutral-focus text-neutral-content rounded-full w-12 h-12 flex items-center justify-center">
-                              <span className="text-xl">
+                            <div className="bg-neutral-focus text-neutral-content rounded-full w-full h-full flex items-center justify-center">
+                              <span className="text-sm xl:text-xl">
                                 {userData.username.charAt(0).toUpperCase()}
                               </span>
                             </div>
@@ -428,39 +455,45 @@ export default function Leaderboard() {
                         </div>
                       </div>
                       <div>
-                        <div className="font-bold">
+                        <div className="font-bold text-sm xl:text-base">
                           {userData.username}
-                          <span className="ml-2 badge badge-primary badge-sm">Vous</span>
+                          <span className="ml-1 xl:ml-2 badge badge-primary badge-xs xl:badge-sm">Vous</span>
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="text-center">{userData.parties_jouees}</td>
-                  <td className="text-center">{userData.parties_gagnees}</td>
+                  <td className="text-center text-sm xl:text-base">{userData.parties_jouees}</td>
+                  <td className="text-center text-sm xl:text-base">{userData.parties_gagnees}</td>
                   <td className="text-center">
-                    <span className="badge badge-success">
+                    <span className="badge badge-success badge-sm xl:badge-md w-full justify-center">
                       {userData.taux_victoire.toFixed(1)}%
                     </span>
                   </td>
-                  <td className="text-center font-bold text-primary">
+                  <td className="text-center font-bold text-primary text-sm xl:text-base lg:table-cell hidden">
                     {userData.meilleur_score}
                   </td>
-                  <td className="text-center">
+                  <td className="text-center lg:table-cell hidden">
                     {userData.serie_victoires_actuelle > 0 ? (
-                      <span className="badge badge-info">
-                        🔥 {userData.serie_victoires_actuelle}
-                      </span>
+                      <>
+                        <span className="badge badge-info badge-sm w-full justify-center xl:hidden">{userData.serie_victoires_actuelle}</span>
+                        <span className="hidden xl:inline-flex badge badge-info badge-md w-full justify-center">
+                          🔥 {userData.serie_victoires_actuelle}
+                        </span>
+                      </>
                     ) : (
-                      <span className="text-base-content/50">0</span>
+                      <span className="text-base-content/50 text-sm xl:text-base">0</span>
                     )}
                   </td>
-                  <td className="text-center">
+                  <td className="text-center lg:table-cell hidden">
                     {userData.nombre_yams_realises > 0 ? (
-                      <span className="badge badge-warning">
-                        🎲 {userData.nombre_yams_realises}
-                      </span>
+                      <>
+                        <span className="badge badge-warning badge-sm w-full justify-center xl:hidden">{userData.nombre_yams_realises}</span>
+                        <span className="hidden xl:inline-flex badge badge-warning badge-md w-full justify-center">
+                          🎲 {userData.nombre_yams_realises}
+                        </span>
+                      </>
                     ) : (
-                      <span className="text-base-content/50">0</span>
+                      <span className="text-base-content/50 text-sm xl:text-base">0</span>
                     )}
                   </td>
                 </tr>
