@@ -55,7 +55,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const baseUrl = request.nextUrl.origin
+    // Utiliser l'URL de base depuis les variables d'environnement en priorité
+    // Sinon utiliser l'origin de la requête (qui peut être localhost en dev)
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                    request.nextUrl.origin
     const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(
       tokenRow.token as string
     )}`

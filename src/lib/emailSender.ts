@@ -1,57 +1,43 @@
 /**
  * Envoi d'emails (confirmation d'inscription, etc.)
  *
- * Implémentation simple via SMTP avec nodemailer.
- * Si un jour on change de fournisseur (SendGrid, Resend, ...),
+ * Implémentation via SendGrid API.
+ * Si un jour on change de fournisseur (Resend, AWS SES, ...),
  * on pourra remplacer ce fichier sans toucher au reste de l'app.
  * 
  * Les templates d'emails utilisent MJML pour un rendu responsive et professionnel.
  */
 
-import nodemailer from 'nodemailer'
+import * as sgMail from '@sendgrid/mail'
 import {
   compileConfirmationTemplate,
   compilePasswordResetTemplate,
 } from './emailTemplates/compileTemplate'
 
-const SMTP_HOST = process.env.SMTP_HOST
-const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587
-const SMTP_USER = process.env.SMTP_USER
-const SMTP_PASS = process.env.SMTP_PASS
-const SMTP_FROM = process.env.SMTP_FROM || 'no-reply@yams.local'
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY
+const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'no-reply@yams.local'
 
-function createTransport() {
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-    console.warn('⚠️ SMTP non configuré. Les emails seront simplement logués en console.')
-    return null
-  }
-
-  const transport = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_PORT === 465,
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
-    // Options de debug pour voir ce qui se passe
-    debug: process.env.NODE_ENV === 'development',
-    logger: process.env.NODE_ENV === 'development',
-  })
-
-  return transport
+// Initialiser SendGrid avec la clé API
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY)
+} else {
+  console.warn('⚠️ SENDGRID_API_KEY non configurée. Les emails seront simplement logués en console.')
 }
 
 export async function sendConfirmationEmail(params: {
   to: string
   confirmationUrl: string
 }) {
-  const transport = createTransport()
   const { to, confirmationUrl } = params
 
-  // Logger la configuration SMTP (sans le mot de passe)
-  if (transport) {
-    console.log(`📧 Configuration SMTP: ${SMTP_HOST}:${SMTP_PORT}, utilisateur: ${SMTP_USER}, from: ${SMTP_FROM}`)
+  // Vérifier que SendGrid est configuré
+  if (!SENDGRID_API_KEY) {
+    console.warn('⚠️ SENDGRID_API_KEY non configurée. Les emails seront simplement logués en console.')
+    console.log('📧 [DEV] Email de confirmation (non envoyé - SendGrid non configuré)')
+    console.log('To:', to)
+    console.log('Subject: Confirme ton inscription à Yams Online')
+    console.log('URL:', confirmationUrl)
+    return
   }
 
   const subject = 'Confirme ton inscription à Yams Online'
@@ -78,59 +64,58 @@ Si tu n'es pas à l'origine de cette inscription, tu peux ignorer cet email.`
     `
   }
 
-  // Mode "fallback": si pas de SMTP, log en console
-  if (!transport) {
-    console.warn('⚠️ SMTP non configuré. Les emails seront simplement logués en console.')
-    console.log('📧 [DEV] Email de confirmation (non envoyé - SMTP non configuré)')
-    console.log('To:', to)
-    console.log('Subject:', subject)
-    console.log('URL:', confirmationUrl)
-    return
-  }
-
   try {
-    // Vérifier la connexion SMTP avant d'envoyer
-    console.log(`🔍 Vérification de la connexion SMTP (${SMTP_HOST}:${SMTP_PORT})...`)
-    await transport.verify()
-    console.log(`✅ Connexion SMTP vérifiée avec succès`)
-
-    // Envoyer l'email
-    const info = await transport.sendMail({
-      from: SMTP_FROM,
+    // Envoyer l'email via SendGrid
+    const msg = {
       to,
+      from: SENDGRID_FROM_EMAIL,
       subject,
       text,
       html,
-    })
+    }
+
+    const [response] = await sgMail.send(msg)
 
     console.log(`✅ Email de confirmation envoyé à ${to}`)
-    console.log(`📧 Message ID: ${info.messageId || 'Non fourni'}`)
-    console.log(`📧 Réponse du serveur: ${info.response || 'Aucune réponse'}`)
-    console.log(`📧 Accepted: ${info.accepted?.join(', ') || 'Aucun'}`)
-    console.log(`📧 Rejected: ${info.rejected?.join(', ') || 'Aucun'}`)
-    
-    // Vérifications supplémentaires
-    if (!info.messageId) {
-      console.warn('⚠️ Attention: Le serveur SMTP n\'a pas retourné de messageId. L\'email pourrait ne pas avoir été envoyé.')
-    }
-    
-    if (info.rejected && info.rejected.length > 0) {
-      console.error(`❌ L'adresse email ${to} a été rejetée par le serveur SMTP`)
-    }
-    
-    if (info.accepted && info.accepted.length === 0) {
-      console.error(`❌ Aucune adresse email n'a été acceptée par le serveur SMTP`)
-    }
+    console.log(`📧 Status Code: ${response.statusCode}`)
+    console.log(`📧 Headers:`, response.headers)
   } catch (error) {
     console.error('❌ Erreur lors de l\'envoi de l\'email de confirmation:', error)
+    
+    // Gestion spécifique des erreurs SendGrid
+    if (error && typeof error === 'object' && 'response' in error && error.response) {
+      const sgError = error.response as { 
+        body?: { 
+          errors?: Array<{ message?: string; field?: string }> 
+        } 
+      }
+      
+      if (sgError.body?.errors) {
+        const errors = sgError.body.errors
+        console.error('❌ Erreurs SendGrid:', errors)
+        
+        // Vérifier si c'est une erreur d'identité d'expéditeur non vérifiée
+        const senderIdentityError = errors.find(
+          (e) => e.message?.includes('verified Sender Identity') || e.field === 'from'
+        )
+        
+        if (senderIdentityError) {
+          console.error('❌ ERREUR CRITIQUE: L\'adresse email d\'expéditeur n\'est pas vérifiée dans SendGrid.')
+          console.error('❌ Vérifie que SENDGRID_FROM_EMAIL correspond à une adresse vérifiée dans SendGrid.')
+          console.error('❌ Consulte: https://sendgrid.com/docs/for-developers/sending-email/sender-identity/')
+        }
+      }
+    }
+    
     if (error instanceof Error) {
       console.error('❌ Détails de l\'erreur:', error.message)
       if ('code' in error) {
         console.error('❌ Code d\'erreur:', error.code)
       }
     }
-    // Ne pas throw pour ne pas faire échouer la création du compte
-    // L'utilisateur peut toujours vérifier son email plus tard
+    
+    // Propager l'erreur pour que la route API puisse la gérer
+    throw error
   }
 }
 
@@ -138,12 +123,16 @@ export async function sendPasswordResetEmail(params: {
   to: string
   resetUrl: string
 }) {
-  const transport = createTransport()
   const { to, resetUrl } = params
 
-  // Logger la configuration SMTP (sans le mot de passe)
-  if (transport) {
-    console.log(`📧 Configuration SMTP: ${SMTP_HOST}:${SMTP_PORT}, utilisateur: ${SMTP_USER}, from: ${SMTP_FROM}`)
+  // Vérifier que SendGrid est configuré
+  if (!SENDGRID_API_KEY) {
+    console.warn('⚠️ SENDGRID_API_KEY non configurée. Les emails seront simplement logués en console.')
+    console.log('📧 [DEV] Email de reset de mot de passe (non envoyé - SendGrid non configuré)')
+    console.log('To:', to)
+    console.log('Subject: Réinitialisation de ton mot de passe Yams Online')
+    console.log('URL:', resetUrl)
+    return
   }
 
   const subject = 'Réinitialisation de ton mot de passe Yams Online'
@@ -170,57 +159,58 @@ Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.`
     `
   }
 
-  if (!transport) {
-    console.warn('⚠️ SMTP non configuré. Les emails seront simplement logués en console.')
-    console.log('📧 [DEV] Email de reset de mot de passe (non envoyé - SMTP non configuré)')
-    console.log('To:', to)
-    console.log('Subject:', subject)
-    console.log('URL:', resetUrl)
-    return
-  }
-
   try {
-    // Vérifier la connexion SMTP avant d'envoyer
-    console.log(`🔍 Vérification de la connexion SMTP (${SMTP_HOST}:${SMTP_PORT})...`)
-    await transport.verify()
-    console.log(`✅ Connexion SMTP vérifiée avec succès`)
-
-    // Envoyer l'email
-    const info = await transport.sendMail({
-      from: SMTP_FROM,
+    // Envoyer l'email via SendGrid
+    const msg = {
       to,
+      from: SENDGRID_FROM_EMAIL,
       subject,
       text,
       html,
-    })
+    }
+
+    const [response] = await sgMail.send(msg)
 
     console.log(`✅ Email de réinitialisation envoyé à ${to}`)
-    console.log(`📧 Message ID: ${info.messageId || 'Non fourni'}`)
-    console.log(`📧 Réponse du serveur: ${info.response || 'Aucune réponse'}`)
-    console.log(`📧 Accepted: ${info.accepted?.join(', ') || 'Aucun'}`)
-    console.log(`📧 Rejected: ${info.rejected?.join(', ') || 'Aucun'}`)
-    
-    // Vérifications supplémentaires
-    if (!info.messageId) {
-      console.warn('⚠️ Attention: Le serveur SMTP n\'a pas retourné de messageId. L\'email pourrait ne pas avoir été envoyé.')
-    }
-    
-    if (info.rejected && info.rejected.length > 0) {
-      console.error(`❌ L'adresse email ${to} a été rejetée par le serveur SMTP`)
-    }
-    
-    if (info.accepted && info.accepted.length === 0) {
-      console.error(`❌ Aucune adresse email n'a été acceptée par le serveur SMTP`)
-    }
+    console.log(`📧 Status Code: ${response.statusCode}`)
+    console.log(`📧 Headers:`, response.headers)
   } catch (error) {
     console.error('❌ Erreur lors de l\'envoi de l\'email de réinitialisation:', error)
+    
+    // Gestion spécifique des erreurs SendGrid
+    if (error && typeof error === 'object' && 'response' in error && error.response) {
+      const sgError = error.response as { 
+        body?: { 
+          errors?: Array<{ message?: string; field?: string }> 
+        } 
+      }
+      
+      if (sgError.body?.errors) {
+        const errors = sgError.body.errors
+        console.error('❌ Erreurs SendGrid:', errors)
+        
+        // Vérifier si c'est une erreur d'identité d'expéditeur non vérifiée
+        const senderIdentityError = errors.find(
+          (e) => e.message?.includes('verified Sender Identity') || e.field === 'from'
+        )
+        
+        if (senderIdentityError) {
+          console.error('❌ ERREUR CRITIQUE: L\'adresse email d\'expéditeur n\'est pas vérifiée dans SendGrid.')
+          console.error('❌ Vérifie que SENDGRID_FROM_EMAIL correspond à une adresse vérifiée dans SendGrid.')
+          console.error('❌ Consulte: https://sendgrid.com/docs/for-developers/sending-email/sender-identity/')
+        }
+      }
+    }
+    
     if (error instanceof Error) {
       console.error('❌ Détails de l\'erreur:', error.message)
       if ('code' in error) {
         console.error('❌ Code d\'erreur:', error.code)
       }
     }
-    // Ne pas throw pour ne pas faire échouer la demande de reset
+    
+    // Propager l'erreur pour que la route API puisse la gérer
+    throw error
   }
 }
 
