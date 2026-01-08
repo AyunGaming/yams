@@ -16,6 +16,7 @@
     "daisyui": "^5.1.29",
     "dotenv": "^17.2.3",
     "jsonwebtoken": "^9.0.2",
+    "mjml": "^4.18.0",
     "next": "15.5.4",
     "next-themes": "^0.4.6",
     "nodemailer": "^7.0.11",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/mjml": "^4.7.4",
     "@types/node": "^20.19.19",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19",

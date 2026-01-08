@@ -4,9 +4,15 @@
  * Implémentation simple via SMTP avec nodemailer.
  * Si un jour on change de fournisseur (SendGrid, Resend, ...),
  * on pourra remplacer ce fichier sans toucher au reste de l'app.
+ * 
+ * Les templates d'emails utilisent MJML pour un rendu responsive et professionnel.
  */
 
 import nodemailer from 'nodemailer'
+import {
+  compileConfirmationTemplate,
+  compilePasswordResetTemplate,
+} from './emailTemplates/compileTemplate'
 
 const SMTP_HOST = process.env.SMTP_HOST
 const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587
@@ -56,24 +62,21 @@ ${confirmationUrl}
 
 Si tu n'es pas à l'origine de cette inscription, tu peux ignorer cet email.`
 
-  const html = `
-    <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6;">
-      <h2>Bienvenue sur Yams Online 🎲</h2>
-      <p>Merci de ton inscription ! Pour activer ton compte, clique sur le bouton ci-dessous :</p>
-      <p style="margin: 24px 0;">
-        <a href="${confirmationUrl}"
-           style="background-color: #4f46e5; color: #ffffff; padding: 10px 18px; border-radius: 999px; text-decoration: none; font-weight: 600;">
-          Confirmer mon adresse email
-        </a>
-      </p>
-      <p>Ou copie-colle ce lien dans ton navigateur :</p>
-      <p style="word-break: break-all; color: #374151;">${confirmationUrl}</p>
-      <hr style="margin: 24px 0; border-color: #e5e7eb;" />
-      <p style="font-size: 12px; color: #6b7280;">
-        Si tu n'es pas à l'origine de cette inscription, tu peux ignorer cet email.
-      </p>
-    </div>
-  `
+  // Compiler le template MJML en HTML
+  let html: string
+  try {
+    html = compileConfirmationTemplate(confirmationUrl)
+  } catch (error) {
+    console.error('❌ Erreur lors de la compilation du template MJML:', error)
+    // Fallback vers un HTML simple en cas d'erreur
+    html = `
+      <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6;">
+        <h2>Bienvenue sur Yams Online 🎲</h2>
+        <p>Merci de ton inscription ! Pour activer ton compte, clique sur le lien suivant :</p>
+        <p><a href="${confirmationUrl}">${confirmationUrl}</a></p>
+      </div>
+    `
+  }
 
   // Mode "fallback": si pas de SMTP, log en console
   if (!transport) {
@@ -151,24 +154,21 @@ ${resetUrl}
 
 Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.`
 
-  const html = `
-    <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6;">
-      <h2>Réinitialisation de ton mot de passe 🔑</h2>
-      <p>Tu as demandé à réinitialiser ton mot de passe. Clique sur le bouton ci-dessous pour en choisir un nouveau :</p>
-      <p style="margin: 24px 0;">
-        <a href="${resetUrl}"
-           style="background-color: #4f46e5; color: #ffffff; padding: 10px 18px; border-radius: 999px; text-decoration: none; font-weight: 600;">
-          Définir un nouveau mot de passe
-        </a>
-      </p>
-      <p>Ou copie-colle ce lien dans ton navigateur :</p>
-      <p style="word-break: break-all; color: #374151;">${resetUrl}</p>
-      <hr style="margin: 24px 0; border-color: #e5e7eb;" />
-      <p style="font-size: 12px; color: #6b7280;">
-        Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.
-      </p>
-    </div>
-  `
+  // Compiler le template MJML en HTML
+  let html: string
+  try {
+    html = compilePasswordResetTemplate(resetUrl)
+  } catch (error) {
+    console.error('❌ Erreur lors de la compilation du template MJML:', error)
+    // Fallback vers un HTML simple en cas d'erreur
+    html = `
+      <div style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6;">
+        <h2>Réinitialisation de ton mot de passe 🔑</h2>
+        <p>Tu as demandé à réinitialiser ton mot de passe. Clique sur le lien suivant :</p>
+        <p><a href="${resetUrl}">${resetUrl}</a></p>
+      </div>
+    `
+  }
 
   if (!transport) {
     console.warn('⚠️ SMTP non configuré. Les emails seront simplement logués en console.')

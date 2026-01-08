@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
 
+  experimental: {
+    serverComponentsExternalPackages: ['mjml'],
+  },
+
   images: {
     remotePatterns: [
       {
