@@ -34,7 +34,6 @@ export async function POST(request: NextRequest) {
     // Utiliser l'URL de base depuis les variables d'environnement en priorité
     // Sinon utiliser l'origin de la requête (qui peut être localhost en dev)
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-                    process.env.BASE_URL || 
                     request.nextUrl.origin
     // IMPORTANT :
     // La route de confirmation est une route API située sous /api/auth/confirm (voir src/app/api/auth/confirm/route.ts).
