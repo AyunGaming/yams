@@ -5,7 +5,7 @@
 
 import { Socket } from 'socket.io-client'
 import { ScoreCategory, GameState } from '@/types/game'
-import { api } from '@/lib/apiClient'
+import { Achievement } from '@/types/achievement'
 
 /**
  * Démarre la partie
@@ -24,7 +24,8 @@ export function handleLeaveGame(
   socket: Socket | null,
   roomId: string,
   started: boolean,
-  onComplete: () => void
+  onComplete: () => void,
+  onAchievementUnlocked?: (achievement: Achievement) => void
 ): void {
   if (socket) {
     if (started) {
@@ -33,6 +34,8 @@ export function handleLeaveGame(
       socket.emit('abandon_game', roomId)
 
       // Débloquer le succès "abandonner une partie" en arrière-plan
+      // IMPORTANT: Cet appel est fait uniquement pour le joueur qui abandonne
+      // Ne pas appeler cette fonction pour les autres joueurs
       fetch('/api/achievements/unlock', {
         method: 'POST',
         headers: {
@@ -40,9 +43,33 @@ export function handleLeaveGame(
         },
         credentials: 'include',
         body: JSON.stringify({ achievementId: 'give_up' }),
-      }).catch((e) => {
-        console.warn('[GAME] Impossible de débloquer le succès give_up:', e)
       })
+        .then(async (res) => {
+          if (res.ok) {
+            const json = await res.json().catch(() => null)
+            if (json?.success && json?.achievement) {
+              // Appeler le callback si fourni (seulement pour le joueur qui abandonne)
+              if (onAchievementUnlocked) {
+                onAchievementUnlocked(json.achievement)
+              }
+              
+              // Stocker dans sessionStorage pour affichage au dashboard si nécessaire
+              // (seulement pour le joueur qui abandonne)
+              try {
+                const pendingAchievements = JSON.parse(
+                  sessionStorage.getItem('pending_achievements') || '[]'
+                )
+                pendingAchievements.push(json.achievement)
+                sessionStorage.setItem('pending_achievements', JSON.stringify(pendingAchievements))
+              } catch (e) {
+                console.warn('[GAME] Impossible de stocker l\'achievement:', e)
+              }
+            }
+          }
+        })
+        .catch((e) => {
+          console.warn('[GAME] Impossible de débloquer le succès give_up:', e)
+        })
 
       // Laisser 100ms pour que l'événement arrive au serveur avant de déconnecter
       setTimeout(() => {

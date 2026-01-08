@@ -122,8 +122,27 @@ export function setupRoomHandlers(
     }
 
     // Vérifier si la partie est déjà en cours
+    // Vérifier d'abord dans roomStates, puis dans la base de données si nécessaire
     const roomState = roomStates.get(roomId)
-    const isGameStarted = roomState?.started || false
+    let isGameStarted = roomState?.started || false
+    
+    // Si roomState n'existe pas, vérifier le statut dans la base de données
+    if (!roomState) {
+      try {
+        const { data: gameData } = await supabase
+          .from('games')
+          .select('status')
+          .eq('id', roomId)
+          .single()
+        
+        if (gameData) {
+          // La partie est en cours ou terminée si le statut n'est pas 'waiting'
+          isGameStarted = gameData.status !== 'waiting'
+        }
+      } catch (err) {
+        console.error('[ROOM] Erreur vérification statut partie:', err)
+      }
+    }
 
     // SÉCURITÉ : Vérifier avant de rejoindre la room
     if (!isGameStarted) {

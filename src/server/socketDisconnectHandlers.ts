@@ -7,6 +7,7 @@
 import { Server, Socket } from 'socket.io'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { removePlayer, getGameState } from './gameManager'
+import { updateUserStats, countYamsInScoreSheet, getUserProfile } from '../lib/userStats'
 
 // Délai de grâce en millisecondes (60 secondes)
 const DISCONNECT_GRACE_PERIOD = 60000
@@ -89,12 +90,51 @@ export function setupDisconnectHandlers(
             const timerKey = `${roomId}-${userId}`
             
             // Créer un timer pour l'abandon après 60 secondes
-            const abandonTimer = setTimeout(() => {
+            const abandonTimer = setTimeout(async () => {
               console.log(`[DISCONNECT] Timer expiré pour ${playerName} dans ${roomId}`)
+              
+              // Récupérer le gameState AVANT de retirer le joueur pour sauvegarder ses stats
+              const gameBeforeRemoval = getGameState(roomId)
+              
+              // Enregistrer les stats avec perte d'XP si le joueur existe dans le gameState
+              if (gameBeforeRemoval && userId) {
+                // Trouver le joueur qui abandonne par userId (car socket.id n'est plus valide)
+                const abandoningPlayer = gameBeforeRemoval.players.find((p) => p.userId === userId)
+                
+                if (abandoningPlayer) {
+                  // Compter les Yams réalisés
+                  const yamsCount = countYamsInScoreSheet(abandoningPlayer.scoreSheet)
+                  
+                  // Récupérer le niveau actuel du joueur pour calculer la perte d'XP
+                  const { data: userProfile } = await getUserProfile(supabase, userId)
+                  const currentLevel = userProfile?.level || 1
+                  
+                  // Calculer la perte d'XP: exp -= lvl * 10
+                  const xpLoss = currentLevel * 10
+                  const xpGained = -xpLoss
+                  
+                  // Enregistrer les statistiques d'abandon
+                  const result = await updateUserStats(supabase, {
+                    user_id: userId,
+                    score: abandoningPlayer.totalScore,
+                    won: false,
+                    abandoned: true,
+                    yams_count: yamsCount,
+                    xp_gained: xpGained,
+                  })
+                  
+                  if (!result.success) {
+                    console.error(`[STATS] Erreur sauvegarde stats d'abandon (déconnexion):`, result.error)
+                  } else {
+                    console.log(`[STATS] ${playerName} a perdu ${xpLoss} XP (niveau ${currentLevel}) suite à l'abandon par déconnexion`)
+                  }
+                }
+              }
               
               // Le joueur ne s'est pas reconnecté, marquer comme abandonné
               io.to(roomId).emit('system_message', `${playerName} a abandonné la partie`)
               
+              // Retirer le joueur du gameState (utiliser socket.id sauvegardé)
               const updatedGame = removePlayer(roomId, socket.id)
               
               if (!updatedGame) {

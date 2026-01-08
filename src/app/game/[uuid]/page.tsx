@@ -281,7 +281,7 @@ export default function GamePage() {
     canLeaveWithoutWarning.current = true
     handleLeaveGame(socket, uuid, started, () => {
       router.push('/dashboard')
-    })
+    }, showAchievement)
   }
 
   const onRollDice = () => handleRollDice(socket, uuid, gameState, setIsRolling, setRollCount)

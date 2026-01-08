@@ -7,7 +7,7 @@ import { Server, Socket } from 'socket.io'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { rollDice, toggleDieLock, chooseScore, removePlayer, getGame } from './gameManager'
 import { ScoreCategory } from '../types/game'
-import { updateUserStats, countYamsInScoreSheet } from '../lib/userStats'
+import { updateUserStats, countYamsInScoreSheet, getUserProfile } from '../lib/userStats'
 import { getCategoryLabel } from '../lib/categoryLabels'
 import { startTurnTimerWithCallbacks } from './timerUtils'
 import { updateFinishedGame } from './gameDbUtils'
@@ -159,8 +159,13 @@ export function setupGameHandlers(
         // Compter les Yams réalisés
         const yamsCount = countYamsInScoreSheet(abandoningPlayer.scoreSheet)
 
-        // En cas d'abandon, le joueur ne gagne pas d'XP
-        const xpGained = 0
+        // Récupérer le niveau actuel du joueur pour calculer la perte d'XP
+        const { data: userProfile } = await getUserProfile(supabase, userId)
+        const currentLevel = userProfile?.level || 1
+        
+        // Calculer la perte d'XP: exp -= lvl * 10
+        const xpLoss = currentLevel * 10
+        const xpGained = -xpLoss
 
         // Enregistrer les statistiques d'abandon
         const result = await updateUserStats(supabase, {
@@ -174,6 +179,8 @@ export function setupGameHandlers(
 
         if (!result.success) {
           console.error(`[STATS] Erreur sauvegarde stats d'abandon:`, result.error)
+        } else {
+          console.log(`[STATS] ${playerName} a perdu ${xpLoss} XP (niveau ${currentLevel}) suite à l'abandon`)
         }
       }
     }
@@ -199,7 +206,10 @@ export function setupGameHandlers(
         reason: 'abandon',
         message: `${updatedGame.winner} remporte la partie par abandon !`,
       })
-      roomStates.delete(roomId)
+      // Ne pas supprimer roomStates immédiatement pour éviter que les joueurs soient renvoyés à la salle d'attente
+      // Le roomState sera nettoyé quand tous les joueurs quitteront la partie
+      // Marquer la partie comme terminée dans roomStates au lieu de la supprimer
+      roomStates.set(roomId, { started: true }) // Garder started: true pour que les joueurs restent sur l'écran de fin
     } else {
       // Compter les joueurs actifs (non-abandonnés)
       const activePlayers = updatedGame.players.filter(p => !p.abandoned)

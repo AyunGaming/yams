@@ -4,6 +4,8 @@ export const dynamic = "force-dynamic";
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSupabase } from '@/components/Providers'
+import { useFlashMessage } from '@/contexts/FlashMessageContext'
+import { Achievement } from '@/types/achievement'
 import CreateGame from '@/components/CreateGame'
 import JoinGame from '@/components/JoinGame'
 import UserProfile from '@/components/UserProfile'
@@ -13,6 +15,7 @@ import RecentAchievements from '@/components/RecentAchievements'
 export default function DashboardPage() {
   const router = useRouter()
   const { user, isLoading: authLoading } = useSupabase()
+  const { showAchievement } = useFlashMessage()
 
   // Logs de débogage
   useEffect(() => {
@@ -26,6 +29,33 @@ export default function DashboardPage() {
       router.push('/login')
     }
   }, [user, authLoading, router])
+
+  // Vérifier et afficher les achievements en attente depuis sessionStorage
+  useEffect(() => {
+    if (authLoading) return
+
+    try {
+      const pendingAchievementsStr = sessionStorage.getItem('pending_achievements')
+      if (pendingAchievementsStr) {
+        const pendingAchievements = JSON.parse(pendingAchievementsStr) as Achievement[]
+        
+        // Afficher chaque achievement avec un petit délai pour l'animation
+        pendingAchievements.forEach((achievement: Achievement, index: number) => {
+          setTimeout(() => {
+            showAchievement(achievement)
+          }, index * 500) // Délai progressif pour plusieurs achievements
+        })
+
+        // Nettoyer sessionStorage après affichage
+        sessionStorage.removeItem('pending_achievements')
+      }
+    } catch (e) {
+      console.warn('[DASHBOARD] Erreur lors de la récupération des achievements en attente:', e)
+      // Nettoyer en cas d'erreur
+      sessionStorage.removeItem('pending_achievements')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading])
 
   // Afficher un message de chargement pendant la vérification de l'authentification
   if (authLoading) {
