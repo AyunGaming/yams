@@ -30,7 +30,7 @@ export const confirmationTemplate = `<mjml>
         <mj-text font-size="14px" color="#6b7280" padding-top="30px" padding-bottom="10px">
           Ou copie-colle ce lien dans ton navigateur :
         </mj-text>
-        <mj-text font-size="12px" color="#9ca3af" word-break="break-all" padding-bottom="30px">
+        <mj-text font-size="12px" color="#9ca3af" padding-bottom="30px">
           {{confirmationUrl}}
         </mj-text>
         <mj-divider border-color="#e5e7eb" border-width="1px" padding="20px 0" />
@@ -69,7 +69,7 @@ export const passwordResetTemplate = `<mjml>
         <mj-text font-size="14px" color="#6b7280" padding-top="30px" padding-bottom="10px">
           Ou copie-colle ce lien dans ton navigateur :
         </mj-text>
-        <mj-text font-size="12px" color="#9ca3af" word-break="break-all" padding-bottom="30px">
+        <mj-text font-size="12px" color="#9ca3af" padding-bottom="30px">
           {{resetUrl}}
         </mj-text>
         <mj-divider border-color="#e5e7eb" border-width="1px" padding="20px 0" />
