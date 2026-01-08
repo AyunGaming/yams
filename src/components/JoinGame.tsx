@@ -37,7 +37,7 @@ export default function JoinGame() {
     try {
       const text = await navigator.clipboard.readText()
       if (text && text.trim()) {
-        setGameId(text.trim())
+        setGameId(text.trim().toUpperCase())
       }
     } catch (error) {
       console.error('Erreur lors de la lecture du presse-papier:', error)
@@ -51,7 +51,7 @@ export default function JoinGame() {
       const pastedText = tempInput.value
       document.body.removeChild(tempInput)
       if (pastedText && pastedText.trim()) {
-        setGameId(pastedText.trim())
+        setGameId(pastedText.trim().toUpperCase())
       }
     }
   }
@@ -72,7 +72,7 @@ export default function JoinGame() {
         placeholder="Entrer le code de la partie"
         className="input input-bordered flex-1 rounded-none border-r-0 input-no-focus"
         value={gameId}
-        onChange={(e) => setGameId(e.target.value)}
+        onChange={(e) => setGameId(e.target.value.toUpperCase())}
         onKeyPress={handleKeyPress}
         disabled={loading}
       />
