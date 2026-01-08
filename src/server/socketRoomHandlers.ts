@@ -149,6 +149,42 @@ export function setupRoomHandlers(
       // Partie pas encore démarrée : vérifier que l'utilisateur n'est pas déjà dans la waiting room
       const canJoin = verifyNotAlreadyInWaitingRoom(io, roomId, userId, socket.id, socket, getPlayersInRoom)
       if (!canJoin) return
+      
+      // Vérifier la capacité AVANT de rejoindre pour éviter de compter le socket actuel
+      try {
+        const { data: gameData } = await supabase
+          .from('games')
+          .select('max_players, owner')
+          .eq('id', roomId)
+          .single()
+
+        if (gameData && gameData.max_players) {
+          const maxPlayers = gameData.max_players
+          
+          // Récupérer les joueurs dans la room AVANT de rejoindre
+          const playersBeforeJoin = getPlayersInRoom(io, roomId)
+          
+          // Compter uniquement les utilisateurs uniques (par userId) pour éviter de compter
+          // plusieurs fois le même utilisateur qui aurait plusieurs sockets
+          const uniqueUserIds = new Set<string>()
+          playersBeforeJoin.forEach(player => {
+            if (player.userId) {
+              uniqueUserIds.add(player.userId)
+            }
+          })
+          
+          // Vérifier si l'utilisateur actuel est déjà dans la room (reconnexion)
+          const isCurrentUserAlreadyInRoom = userId && uniqueUserIds.has(userId)
+          
+          // Si l'utilisateur actuel n'est pas déjà dans la room, vérifier si on peut l'ajouter
+          if (!isCurrentUserAlreadyInRoom && uniqueUserIds.size >= maxPlayers) {
+            socket.emit('error', { message: `La partie est complète (${maxPlayers} joueurs maximum).` })
+            return
+          }
+        }
+      } catch (err) {
+        console.error('[ROOM] Erreur vérification max_players:', err)
+      }
     } else {
       // Partie en cours : vérifier que l'utilisateur fait partie de cette partie (reconnexion légitime)
       const canReconnect = verifyCanReconnectToGame(roomId, userId, socket)
@@ -163,28 +199,6 @@ export function setupRoomHandlers(
 
     // Récupérer les joueurs dans la room
     const players = getPlayersInRoom(io, roomId)
-
-    // Vérifier le nombre max de joueurs si la partie n'a pas démarré
-    if (!isGameStarted) {
-      try {
-        const { data: gameData } = await supabase
-          .from('games')
-          .select('max_players, owner')
-          .eq('id', roomId)
-          .single()
-
-        if (gameData && gameData.max_players) {
-          const maxPlayers = gameData.max_players
-          if (players.length >= maxPlayers) {
-            socket.emit('error', { message: `La partie est complète (${maxPlayers} joueurs maximum).` })
-            socket.leave(roomId)
-            return
-          }
-        }
-      } catch (err) {
-        console.error('[ROOM] Erreur vérification max_players:', err)
-      }
-    }
 
     if (isGameStarted) {
       // La partie est en cours : gérer la reconnexion
