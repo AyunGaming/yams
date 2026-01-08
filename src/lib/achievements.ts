@@ -165,6 +165,10 @@ export async function checkAndUnlockAchievements(
         check: () => context.userProfile.level >= 30 && !unlockedIds.has('level_30'),
       },
       {
+        id: 'level_33',
+        check: () => context.userProfile.level >= 33 && !unlockedIds.has('level_33'),
+      },
+      {
         id: 'level_40',
         check: () => context.userProfile.level >= 40 && !unlockedIds.has('level_40'),
       },
