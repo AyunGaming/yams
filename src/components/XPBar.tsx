@@ -20,24 +20,29 @@ interface XPBarProps {
  * Composant de barre d'XP
  */
 export default function XPBar({ currentXp, currentLevel, size = 'md' }: XPBarProps) {
+  // Si le joueur est au niveau maximum (50), afficher 0/0 XP
+  const isMaxLevel = currentLevel >= 50
+  
   // xpForLevel(n) retourne l'XP nécessaire pour atteindre le level n
   // L'XP repart de 0 à chaque level, donc l'XP nécessaire pour passer au level suivant
   // est directement xpForLevel(level + 1)
   
   // XP nécessaire pour passer au level suivant (directement la valeur de la formule)
-  const xpNeededForNext = xpForLevel(currentLevel + 1)
+  const xpNeededForNext = isMaxLevel ? 0 : xpForLevel(currentLevel + 1)
   
   // XP minimum pour être au level actuel (début du level)
   // C'est la somme de tous les XP nécessaires pour les levels précédents
   const xpMinForCurrentLevel = currentLevel === 1 ? 0 : xpForLevel(currentLevel)
   
   // XP gagné depuis le début du level actuel (repart de 0 à chaque level)
-  const xpInCurrentLevel = Math.max(0, currentXp - xpMinForCurrentLevel)
+  const xpInCurrentLevel = isMaxLevel ? 0 : Math.max(0, currentXp - xpMinForCurrentLevel)
   
   // Pourcentage de progression vers le prochain level
-  const progressPercent = xpNeededForNext > 0 
-    ? Math.min(100, Math.max(0, (xpInCurrentLevel / xpNeededForNext) * 100))
-    : 100
+  const progressPercent = isMaxLevel 
+    ? 100 // Barre pleine au niveau max
+    : (xpNeededForNext > 0 
+      ? Math.min(100, Math.max(0, (xpInCurrentLevel / xpNeededForNext) * 100))
+      : 100)
   
   // Tailles de la barre
   const sizeClasses = {
@@ -61,9 +66,11 @@ export default function XPBar({ currentXp, currentLevel, size = 'md' }: XPBarPro
           <span className="text-base-content/70 text-sm md:hidden">
             {xpInCurrentLevel.toLocaleString()} / {xpNeededForNext.toLocaleString()} XP
           </span>
-          <span className="text-base-content/60 hidden md:block">
-            {currentXp.toLocaleString()} XP total
-          </span>
+          {!isMaxLevel && (
+            <span className="text-base-content/60 hidden md:block">
+              {currentXp.toLocaleString()} XP total
+            </span>
+          )}
         </div>
       </div>
       
@@ -76,7 +83,7 @@ export default function XPBar({ currentXp, currentLevel, size = 'md' }: XPBarPro
             background: 'var(--gradient-secondary)'
           }}
         >
-          {progressPercent > 15 && (
+          {progressPercent > 15 && !isMaxLevel && (
             <span className="text-secondary-content font-semibold text-xs">
               {Math.round(progressPercent)}%
             </span>
@@ -85,7 +92,7 @@ export default function XPBar({ currentXp, currentLevel, size = 'md' }: XPBarPro
       </div>
       
       {/* Pourcentage si la barre est trop petite */}
-      {progressPercent <= 15 && (
+      {progressPercent <= 15 && !isMaxLevel && (
         <div className="text-right mt-1 text-xs text-base-content/60 hidden md:block">
           {Math.round(progressPercent)}% vers Level {currentLevel + 1}
         </div>

@@ -23,6 +23,7 @@ export function xpForLevel(level: number): number {
  * Calcule le level à partir de l'XP total
  * Trouve le level maximum tel que xpForLevel(level) <= xpTotal
  * Utilise les constantes globales de configuration
+ * Le niveau est bloqué à 50 maximum
  */
 export function levelFromXp(xp: number): number {
   if (xp <= 0) return 1
@@ -31,11 +32,12 @@ export function levelFromXp(xp: number): number {
   while (true) {
     const xpForNextLevel = xpForLevel(level + 1)
     if (xpForNextLevel > xp) {
-      return level
+      // Bloquer le niveau à 50 maximum
+      return Math.min(level, 50)
     }
     level++
-    // Sécurité: éviter les boucles infinies (level max 1000)
-    if (level > 1000) return 1000
+    // Sécurité: éviter les boucles infinies (level max 50)
+    if (level > 50) return 50
   }
 }
 
