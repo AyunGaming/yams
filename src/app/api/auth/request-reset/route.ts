@@ -60,10 +60,18 @@ export async function POST(request: NextRequest) {
       tokenRow.token as string
     )}`
 
-    await sendPasswordResetEmail({
-      to: user.email as string,
-      resetUrl,
-    })
+    // Envoyer l'email de réinitialisation.
+    // Même si l'envoi échoue (timeout SMTP, etc.), on ne doit pas révéler
+    // si l'adresse existe ou non : on loggue juste côté serveur.
+    try {
+      await sendPasswordResetEmail({
+        to: user.email as string,
+        resetUrl,
+      })
+    } catch (error) {
+      console.error('Erreur envoi email de reset (token créé quand même):', error)
+      // On continue vers la réponse générique ci‑dessous.
+    }
 
     return NextResponse.json(
       {

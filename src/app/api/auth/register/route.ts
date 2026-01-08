@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     )}`
 
     // Envoyer l'email de confirmation (ne pas faire échouer la requête si l'email échoue)
+    let emailSent = true
     try {
       await sendConfirmationEmail({
         to: authUser.email,
@@ -48,13 +49,16 @@ export async function POST(request: NextRequest) {
       })
     } catch (error) {
       console.error('Erreur envoi email (compte créé quand même):', error)
-      // Ne pas faire échouer la requête si l'email échoue
-      // L'utilisateur peut toujours vérifier son email plus tard
+      // Ne pas faire échouer la requête si l'email échoue,
+      // mais ajuster le message retourné au client.
+      emailSent = false
     }
 
     return NextResponse.json(
       {
-        message: 'Compte créé. Vérifie ton email pour confirmer ton inscription.',
+        message: emailSent
+          ? 'Compte créé. Vérifie ton email pour confirmer ton inscription.'
+          : "Compte créé, mais l’email de confirmation n’a pas pu être envoyé. Tu pourras réessayer plus tard depuis la page de connexion.",
       },
       { status: 201 }
     )
