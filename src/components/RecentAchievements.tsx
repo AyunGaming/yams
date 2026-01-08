@@ -105,15 +105,15 @@ export default function RecentAchievements() {
 
     switch (rarity) {
       case 'Bronze':
-        return `${basePath}/Bronze/Medals_Bronze.webp`
+        return `${basePath}/Bronze/Medals_bronze.webp`
       case 'Silver':
-        return `${basePath}/Silver/Medals_Silver.webp`
+        return `${basePath}/Silver/Medals_silver.webp`
       case 'Gold':
-        return `${basePath}/Gold/Medals_Gold.webp`
+        return `${basePath}/Gold/Medals_gold.webp`
       case 'Crystal':
-        return `${basePath}/Crystal/Medals_Crystal.webp`
+        return `${basePath}/Crystal/Medals_crystal.webp`
       default:
-        return `${basePath}/Bronze/Medals_Bronze.webp`
+        return `${basePath}/Bronze/Medals_bronze.webp`
     }
   }
 
