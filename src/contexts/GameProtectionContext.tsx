@@ -26,7 +26,6 @@ export function GameProtectionProvider({ children }: { children: ReactNode }) {
 
   const handleAbandonBeforeNavigation = () => {
     if (socket && roomId && isInActiveGame) {
-      console.log('[NAV] Émission abandon_game avant navigation')
       socket.emit('abandon_game', roomId)
       // Attendre un peu pour que l'événement soit traité avant de déconnecter
       setTimeout(() => {

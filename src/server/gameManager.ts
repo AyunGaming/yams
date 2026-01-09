@@ -11,9 +11,8 @@ import { startTurnTimer, clearTurnTimer, clearAllTimers } from './timerManager'
  * Nettoie tous les gestionnaires de jeu (utilisé au redémarrage du serveur)
  */
 export function clearAllGames(): void {
-  const count = clearAllGameStates()
+  clearAllGameStates()
   clearAllTimers()
-  console.log(`🧹 ${count} partie(s) supprimée(s) de la mémoire`)
 }
 
 // Ré-exporter pour compatibilité
@@ -32,10 +31,7 @@ export function updatePlayerSocketId(roomId: string, userId: string, newSocketId
   const player = game.players.find(p => p.userId === userId)
   if (!player) return false
 
-  const oldSocketId = player.id
   player.id = newSocketId
-  
-  console.log(`[GAME] Mise à jour socket.id pour ${player.name}: ${oldSocketId} → ${newSocketId}`)
   return true
 }
 
@@ -67,10 +63,6 @@ export function initializeGame(
     gameStatus: 'playing',
     winner: null,
     variant,
-  }
-  
-  if (isDevelopment) {
-    console.log('🔧 Mode développement : Scores pré-remplis (sauf "chance") pour tests rapides')
   }
   
   setGameState(roomId, gameState)
@@ -152,7 +144,6 @@ export function chooseScore(
   
   // Vérifier que la catégorie peut être choisie selon la variante
   if (!canChooseCategory(game.variant, category, currentPlayer.scoreSheet)) {
-    console.log(`[GAME] Catégorie ${category} non autorisée pour la variante ${game.variant}`)
     return game
   }
   
@@ -326,7 +317,6 @@ export function handleTimerExpired(roomId: string): { gameState: GameState; cate
   
   // Si aucun lancer n'a été fait, simuler un lancer
   if (game.rollsLeft === 3) {
-    console.log(`[TIMER] ${currentPlayer.name} - Aucun lancer effectué, simulation...`)
     game.dice = createDice()
     game.rollsLeft = 2
   }
@@ -336,15 +326,12 @@ export function handleTimerExpired(roomId: string): { gameState: GameState; cate
   const bestCategory = findBestAvailableCategory(diceValues, currentPlayer.scoreSheet, game.variant)
   
   if (!bestCategory) {
-    console.log(`[TIMER] ${currentPlayer.name} - Aucune catégorie disponible`)
     return null
   }
   
   // Calculer le score avant de le choisir
   const scoreValue = calculateScore(bestCategory, diceValues)
-  
-  console.log(`[TIMER] ${currentPlayer.name} - Choix automatique: ${bestCategory} (${scoreValue} points)`)
-  
+
   // Choisir automatiquement le meilleur score
   const updatedGameState = chooseScore(roomId, currentPlayer.id, bestCategory)
   

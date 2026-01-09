@@ -20,7 +20,6 @@ export function createAdminClient() {
     return null;
   }
 
-  console.log("✅ Client Supabase Admin initialisé");
   return createClient(url, serviceRole, {
     auth: {
       autoRefreshToken: false,

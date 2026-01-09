@@ -20,7 +20,6 @@ export function handleTimerExpiredAndRestart(io: Server, roomId: string): void {
   // Message de score avec (afk)
   const categoryLabel = getCategoryLabel(category)
   const message = `${playerName} a marqué ${score} point${score > 1 ? 's' : ''} en ${categoryLabel} (afk)`
-  console.log('[TIMER] Émission du message système:', message)
   io.to(roomId).emit('system_message', message)
   
   io.to(roomId).emit('game_update', updatedGameState)

@@ -18,8 +18,6 @@ export async function verifyToken(token: string): Promise<{
       return { valid: false, error: 'Token manquant' }
     }
 
-    console.log('[SOCKET AUTH] Token reçu (début):', token.substring(0, 30) + '...')
-
     const payload = verifyJwtToken(token)
     if (!payload) {
       return { valid: false, error: 'Token invalide' }

@@ -73,7 +73,7 @@ export function setupMessageListeners(
 ): void {
   // Message système
   socket.on('system_message', (message: string) => {
-    console.log('[CLIENT] Message système reçu:', message)
+    logger.info('[CLIENT] Message système reçu:', message)
     setSystemMessages((prev) => [...prev, message])
   })
 

@@ -57,7 +57,6 @@ export default function GameOverActions({
     
     // Empêcher les appels multiples
     if (isCreatingRematch.current) {
-      console.log('[REMATCH] Création déjà en cours, ignorer')
       return
     }
 
@@ -87,8 +86,6 @@ export default function GameOverActions({
         return
       }
 
-      console.log('[REMATCH] Partie créée avec succès:', newGameId)
-
       // Notifier les autres joueurs via Socket.IO
       const myPlayer = gameState.players.find((p) => p.id === mySocketId)
       if (socket && myPlayer) {
@@ -100,7 +97,6 @@ export default function GameOverActions({
       }
 
       // Rediriger vers la nouvelle partie
-      console.log('[REMATCH] Redirection vers:', `/game/${newGameId}`)
       router.push(`/game/${newGameId}`)
     } catch (error) {
       console.error('[REMATCH] Erreur:', error)

@@ -24,7 +24,6 @@ import { setupDisconnectHandlers } from './src/server/socketDisconnectHandlers'
 
 // ID unique du serveur généré au démarrage pour détecter les redémarrages
 const SERVER_RESTART_ID = Date.now().toString()
-console.log('[SERVER] ID de session:', SERVER_RESTART_ID)
 
 // Récupérer le client Supabase Admin
 const supabase = createAdminClient()
@@ -43,8 +42,6 @@ const handle = app.getRequestHandler()
  * Marque les parties en cours comme interrompues
  */
 async function cleanupOnStartup() {
-  console.log('[SERVER] Nettoyage au démarrage...')
-
   // Nettoyer les gestionnaires de jeu en mémoire
   clearAllGames()
 
@@ -68,7 +65,8 @@ async function cleanupOnStartup() {
     if (error) {
       console.error('[SERVER] Erreur lors du marquage des parties:', error)
     } else if (data && data.length > 0) {
-      console.log(`[SERVER] ${data.length} partie(s) marquée(s) comme interrompue(s)`)
+      // Information uniquement en cas de parties réellement impactées
+      // (laissé silencieux pour éviter le bruit en console)
     }
   } catch (err) {
     console.error('[SERVER] Erreur lors de la vérification des parties:', err)
@@ -127,6 +125,14 @@ app.prepare().then(async () => {
     // Envoyer l'ID de session serveur au client
     socket.emit('server_restart_id', SERVER_RESTART_ID)
 
+    // Si un redémarrage serveur a été détecté, informer le client
+    if (socket.data.serverRestarted) {
+      socket.emit('server_restart_detected', {
+        message: 'Le serveur a redémarré. Reconnexion en cours...',
+        newServerRestartId: SERVER_RESTART_ID,
+      })
+    }
+
     // Configurer les gestionnaires d'événements
     setupRoomHandlers(io, socket, roomStates, supabase)
     setupGameHandlers(io, socket, roomStates, supabase)
@@ -135,7 +141,6 @@ app.prepare().then(async () => {
 
   // Démarrer le serveur
   server.listen(port, hostname, () => {
-    console.log(`[SERVER] Ready on http://${hostname}:${port}`)
-    console.log(`[SERVER] Socket.IO ready on ${hostname}:${port}/api/socket`)
+    // Serveur démarré
   })
 })

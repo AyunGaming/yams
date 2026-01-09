@@ -25,15 +25,6 @@ export function createAuthMiddleware(serverRestartId: string) {
       // Stocker cette information pour l'utiliser après la connexion
       socket.data.serverRestarted = serverRestarted
 
-      if (serverRestarted) {
-        console.log(
-          '[SOCKET] Redémarrage serveur détecté - ancien ID:',
-          clientServerRestartId,
-          'nouvel ID:',
-          serverRestartId
-        )
-      }
-
       // Extraire le token des handshake auth ou query
       const token = socket.handshake.auth.token || socket.handshake.query.token
 

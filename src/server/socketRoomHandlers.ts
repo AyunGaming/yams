@@ -315,8 +315,6 @@ export function setupRoomHandlers(
    * Lancer un compte à rebours avant le début de la partie
    */
   socket.on('start_countdown', (roomId: string) => {
-    console.log('[ROOM] start_countdown reçu pour room', roomId, 'socket', socket.id)
-
     const roomState = roomStates.get(roomId)
 
     // Si la partie a déjà démarré ou qu'un compte à rebours est en cours, ne rien faire
@@ -325,11 +323,9 @@ export function setupRoomHandlers(
     }
 
     const players = getPlayersInRoom(io, roomId)
-    console.log('[ROOM] Joueurs dans la room pour le compte à rebours:', players.length)
 
     // Ne démarrer le compte à rebours que s'il y a au moins 2 joueurs
     if (players.length < 2) {
-      console.log('[ROOM] Pas assez de joueurs pour démarrer le compte à rebours')
       socket.emit('system_message', 'Au moins 2 joueurs sont nécessaires pour démarrer la partie.')
       return
     }

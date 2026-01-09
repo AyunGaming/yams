@@ -12,9 +12,6 @@ export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  console.log('url', url);
-  console.log('key', key);
-
   // ✅ Empêche le crash pendant le build Docker
   if (!url || !key) {
     console.warn("⚠️ Supabase browser client créé en mode BUILD (credentials absents).");

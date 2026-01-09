@@ -25,7 +25,6 @@ export async function verifyGameExists(
       .single()
 
     if (gameError || !gameData) {
-      console.log(`[ROOM] ❌ Tentative de rejoindre une partie inexistante: ${roomId}`)
       socket.emit('game_not_found', { 
         message: 'Cette partie n\'existe pas ou a été supprimée.' 
       })
@@ -60,7 +59,6 @@ export function verifyNotAlreadyInWaitingRoom(
   )
   
   if (alreadyInRoom) {
-    console.log(`[ROOM] ❌ Tentative de rejoindre une partie où l'utilisateur est déjà présent`)
     socket.emit('error', { 
       message: 'Vous êtes déjà dans cette partie. Vous ne pouvez pas jouer contre vous-même.' 
     })
@@ -86,7 +84,6 @@ export function verifyCanReconnectToGame(
 
   const isPlayerInGame = gameState.players.some(p => p.userId === userId)
   if (!isPlayerInGame) {
-    console.log(`[ROOM] ❌ Tentative de rejoindre une partie en cours où l'utilisateur n'est pas joueur`)
     socket.emit('error', { 
       message: 'Vous ne pouvez pas rejoindre cette partie en cours.' 
     })

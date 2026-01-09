@@ -20,18 +20,16 @@ export function handlePlayerReconnection(
   const gameState = getGameState(roomId)
   if (!gameState) return
 
-  console.log(`[ROOM] ${playerName} se reconnecte à une partie en cours`)
-  
   // Mettre à jour le socket.id du joueur dans le gameState
   const updated = updatePlayerSocketId(roomId, userId, socket.id)
   if (updated) {
-    console.log(`[ROOM] Socket.id mis à jour pour ${playerName}`)
+    // socket.id mis à jour pour ce joueur
   }
   
   // Annuler le timer de déconnexion si il existe
   const timerCancelled = cancelDisconnectTimer(roomId, userId)
   if (timerCancelled) {
-    console.log(`[ROOM] Timer de déconnexion annulé pour ${playerName}`)
+    // Timer de déconnexion annulé pour ce joueur
   }
   
   // Récupérer l'état mis à jour
@@ -66,14 +64,12 @@ function notifyReconnection(
   // Notifier les autres joueurs de la reconnexion
   if (isAbandoned) {
     socket.to(roomId).emit('system_message', `${playerName} s'est reconnecté (spectateur)`)
-    console.log(`[ROOM] ${playerName} se reconnecte en tant que spectateur (abandonné)`)
   } else {
     socket.to(roomId).emit('system_message', `${playerName} s'est reconnecté`)
     
     // Si c'est le tour du joueur qui se reconnecte, le notifier
     const currentPlayer = gameState.players[gameState.currentPlayerIndex]
     if (currentPlayer.userId === userId) {
-      console.log(`[ROOM] C'est le tour de ${playerName} (reconnecté)`)
       io.to(roomId).emit('system_message', `C'est au tour de ${playerName}`)
     }
   }

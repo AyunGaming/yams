@@ -64,7 +64,6 @@ export async function updateUserStats(
       return { success: false, error: error.message }
     }
 
-    console.log('✅ Stats mises à jour avec succès')
     return { success: true }
   } catch (error) {
     console.error('❌ Erreur lors de la mise à jour des stats:', error)
@@ -86,7 +85,6 @@ export function countYamsInScoreSheet(scoreSheet: ScoreSheet): number {
   // Note: yams peut être 50 (réussi), 0 (raté), ou null (pas encore joué)
   if (scoreSheet.yams !== null && scoreSheet.yams === 50) {
     yamsCount++
-    console.log('🎲 Yams détecté dans la feuille de score !')
   }
   
   // Vérifier les bonus Yams (si implémenté dans votre logique)
@@ -146,7 +144,6 @@ export async function updateUserProfile(
       return { success: false, error: error.message }
     }
 
-    console.log('✅ Profil mis à jour avec succès')
     return { success: true }
   } catch (error) {
     console.error('❌ Erreur lors de la mise à jour du profil:', error)

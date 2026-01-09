@@ -19,38 +19,26 @@ export default function CreateGame() {
   const [selectedVariant, setSelectedVariant] = useState<GameVariant>('classic')
 
   const handleCreate = async () => {
-    console.log('[CREATE] 1. Début de la création')
-    console.log('[CREATE] 2. User:', user?.id)
-    console.log('[CREATE] Variante choisie:', selectedVariant)
-    
     if (!user) {
-      console.log('[CREATE] ❌ Pas d\'utilisateur, redirection vers login')
       return router.push('/login')
     }
 
-    // Activer le loading IMMÉDIATEMENT
     setLoading(true)
-    console.log('[CREATE] 3. Loading activé')
     
     // Petit délai pour garantir que React affiche le loading avant l'opération async
     await new Promise(resolve => setTimeout(resolve, 50))
     
     const id = generateGameId()
-    console.log('[CREATE] 4. ID généré:', id)
 
     try {
-      console.log('[CREATE] 5. Appel API /api/games...')
-      const { data, error } = await api.post<{ game: { id: string } }>('/api/games', {
+      const { error } = await api.post<{ game: { id: string } }>('/api/games', {
         id,
         variant: selectedVariant,
       })
 
-      console.log('[CREATE] 6. Réponse API /api/games:', { error, data })
-
       if (error) {
         console.error('[CREATE] ❌ Erreur API:', error)
         setLoading(false)
-        console.log('[CREATE] 7. Loading désactivé')
         alert(`Erreur lors de la création de la partie: ${error || 'Erreur inconnue'}`)
       } else {
         // Débloquer les succès d'action liés à la création de partie
@@ -78,7 +66,6 @@ export default function CreateGame() {
           console.warn('[CREATE] Impossible de débloquer le succès create_game:', unlockError)
         }
 
-        console.log('[CREATE] ✅ Partie créée! Redirection...')
         setShowModal(false)
         await new Promise(resolve => setTimeout(resolve, 200))
         router.push(`/game/${id}`)

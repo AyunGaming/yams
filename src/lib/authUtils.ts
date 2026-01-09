@@ -52,7 +52,7 @@ export async function signOutLocal(
       return { success: false, error: error.message }
     }
     
-    console.log('✅ Déconnexion locale Supabase réussie')
+    logger.success('Déconnexion locale Supabase réussie')
     return { success: true }
   } catch (error) {
     console.error('Erreur inattendue signOut:', error)
@@ -70,17 +70,17 @@ export async function cleanupSession(
   supabase: SupabaseClient,
   redirectUrl: string = '/'
 ): Promise<void> {
-  console.log('🚪 Déconnexion IMMÉDIATE en cours...')
+  logger.info('Déconnexion IMMÉDIATE en cours...')
 
   try {
     // 1. Nettoyage localStorage (synchrone, immédiat)
     tokenManager.clearTokens()
     localStorage.removeItem('serverRestartId')
-    console.log('✅ Tokens locaux supprimés')
+    logger.success('Tokens locaux supprimés')
 
     // 2. Suppression cookies Supabase (synchrone, immédiat)
     clearSupabaseCookies()
-    console.log('✅ Cookies Supabase supprimés')
+    logger.success('Cookies Supabase supprimés')
 
     // 3. Déconnexion Supabase en arrière-plan (non-bloquante)
     // On ne l'attend PAS pour ne pas bloquer l'utilisateur
@@ -92,7 +92,7 @@ export async function cleanupSession(
     console.error('❌ Erreur lors du nettoyage:', error)
   }
 
-  console.log('🔄 Redirection IMMÉDIATE vers', redirectUrl)
+  logger.info('Redirection IMMÉDIATE vers', redirectUrl)
   
   // 4. Redirection IMMÉDIATE (sans délai, sans await)
   window.location.href = redirectUrl

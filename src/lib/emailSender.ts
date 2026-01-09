@@ -33,10 +33,6 @@ export async function sendConfirmationEmail(params: {
   // Vérifier que SendGrid est configuré
   if (!SENDGRID_API_KEY) {
     console.warn('⚠️ SENDGRID_API_KEY non configurée. Les emails seront simplement logués en console.')
-    console.log('📧 [DEV] Email de confirmation (non envoyé - SendGrid non configuré)')
-    console.log('To:', to)
-    console.log('Subject: Confirme ton inscription à Yams Online')
-    console.log('URL:', confirmationUrl)
     return
   }
 
@@ -74,11 +70,7 @@ Si tu n'es pas à l'origine de cette inscription, tu peux ignorer cet email.`
       html,
     }
 
-    const [response] = await sgMail.send(msg)
-
-    console.log(`✅ Email de confirmation envoyé à ${to}`)
-    console.log(`📧 Status Code: ${response.statusCode}`)
-    console.log(`📧 Headers:`, response.headers)
+    await sgMail.send(msg)
   } catch (error) {
     console.error('❌ Erreur lors de l\'envoi de l\'email de confirmation:', error)
     
@@ -128,10 +120,6 @@ export async function sendPasswordResetEmail(params: {
   // Vérifier que SendGrid est configuré
   if (!SENDGRID_API_KEY) {
     console.warn('⚠️ SENDGRID_API_KEY non configurée. Les emails seront simplement logués en console.')
-    console.log('📧 [DEV] Email de reset de mot de passe (non envoyé - SendGrid non configuré)')
-    console.log('To:', to)
-    console.log('Subject: Réinitialisation de ton mot de passe Yams Online')
-    console.log('URL:', resetUrl)
     return
   }
 
@@ -169,11 +157,7 @@ Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.`
       html,
     }
 
-    const [response] = await sgMail.send(msg)
-
-    console.log(`✅ Email de réinitialisation envoyé à ${to}`)
-    console.log(`📧 Status Code: ${response.statusCode}`)
-    console.log(`📧 Headers:`, response.headers)
+    await sgMail.send(msg)
   } catch (error) {
     console.error('❌ Erreur lors de l\'envoi de l\'email de réinitialisation:', error)
     

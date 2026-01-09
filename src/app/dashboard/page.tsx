@@ -17,15 +17,9 @@ export default function DashboardPage() {
   const { user, isLoading: authLoading } = useSupabase()
   const { showAchievement } = useFlashMessage()
 
-  // Logs de débogage
-  useEffect(() => {
-    console.log('🔍 Dashboard - État:', { authLoading, hasUser: !!user })
-  }, [authLoading, user])
-
   // Redirection si pas connecté (attendre que la vérification soit terminée)
   useEffect(() => {
     if (!authLoading && user === null) {
-      console.log('🚪 Utilisateur non connecté - Redirection vers /login')
       router.push('/login')
     }
   }, [user, authLoading, router])
@@ -59,7 +53,6 @@ export default function DashboardPage() {
 
   // Afficher un message de chargement pendant la vérification de l'authentification
   if (authLoading) {
-    console.log('⏳ Dashboard en attente de chargement...')
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
         <span className="loading loading-spinner loading-lg text-primary"></span>

@@ -12,7 +12,6 @@ export default function LeaderboardPage() {
   // Redirection si pas connecté
   useEffect(() => {
     if (!authLoading && user === null) {
-      console.log('🚪 Utilisateur non connecté - Redirection vers /login')
       router.push('/login')
     }
   }, [user, authLoading, router])

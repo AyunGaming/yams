@@ -98,39 +98,12 @@ export default function GamePage() {
 
   // Signaler au contexte global si on est en partie active + passer socket et roomId
   useEffect(() => {
-    console.log('[PROTECTION] Démarrage vérification', {
-      hasGameState: !!gameState,
-      hasPlayers: !!gameState?.players,
-      started,
-      gameEnded
-    })
-    
     // Si pas de gameState, pas de protection
     if (!gameState || !gameState.players) {
-      console.log('[PROTECTION] Pas de gameState ou players, pas de protection')
       setIsInActiveGame(false)
       return
     }
-    
-    console.log('[PROTECTION] Recherche joueur:', {
-      userId,
-      socketId: socket?.id,
-      allPlayers: gameState.players.map(p => ({
-        name: p.name,
-        userId: p.userId,
-        socketId: p.id,
-        abandoned: p.abandoned
-      }))
-    })
-    
-    console.log('[PROTECTION] Résultat:', { 
-      myPlayerFound: !!myPlayer,
-      myPlayerName: myPlayer?.name,
-      myPlayerAbandoned: myPlayer?.abandoned,
-      isAbandoned, 
-      isInActiveGame
-    })
-    
+
     setIsInActiveGame(isInActiveGame)
     setSocket(socket)
     setRoomId(uuid)
@@ -142,12 +115,7 @@ export default function GamePage() {
     if (!gameState || !gameState.players) {
       return
     }
-    
-    console.log('[PROTECTION] beforeunload check:', {
-      isAbandoned,
-      myPlayerName: myPlayer?.name,
-    }) 
-    
+
     // Ne protéger que si la partie est en cours ET que le joueur n'a pas abandonné
     if (!started || isGameFinished || isAbandoned) {
       return
@@ -178,7 +146,6 @@ export default function GamePage() {
         const json = await res.json()
 
         if (!res.ok || !json.data) {
-          console.log('[GAME] ❌ Partie introuvable:', uuid)
           if (!isRedirectingRef.current) {
             isRedirectingRef.current = true
             alert('Cette partie n\'existe pas ou a été supprimée.')

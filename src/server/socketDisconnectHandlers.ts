@@ -24,7 +24,6 @@ export function cancelDisconnectTimer(roomId: string, userId: string) {
   const existingTimer = disconnectTimers.get(timerKey)
   
   if (existingTimer) {
-    console.log(`[DISCONNECT] Annulation du timer pour ${userId} dans ${roomId}`)
     clearTimeout(existingTimer)
     disconnectTimers.delete(timerKey)
     return true
@@ -45,20 +44,16 @@ export function setupDisconnectHandlers(
   // Utiliser 'disconnecting' au lieu de 'disconnect' pour avoir accès aux rooms
   socket.on('disconnecting', () => {
     const playerName = socket.data.playerName || 'Un joueur'
-    console.log(`[DISCONNECT] ${playerName} (${socket.id}) est en train de se déconnecter`)
 
     // Copier les rooms AVANT de faire quoi que ce soit
     const roomsCopy = Array.from(socket.rooms)
-    console.log(`[DISCONNECT] Rooms du joueur:`, roomsCopy)
 
     // Notifier toutes les rooms auxquelles le joueur appartenait
     roomsCopy.forEach((roomId) => {
       if (roomId !== socket.id) {
         // Ignore la room personnelle du socket
-        console.log(`[DISCONNECT] Traitement de la room: ${roomId}`)
         const roomState = roomStates.get(roomId)
         const isGameStarted = roomState?.started || false
-        console.log(`[DISCONNECT] Room ${roomId} - Partie commencée: ${isGameStarted}`)
 
         if (isGameStarted) {
           // Vérifier si la partie est déjà terminée
@@ -66,14 +61,12 @@ export function setupDisconnectHandlers(
           const isGameFinished = gameState?.gameStatus === 'finished'
           
           if (isGameFinished) {
-            console.log(`[DISCONNECT] ${playerName} quitte une partie terminée, pas de timer`)
             // Partie déjà terminée, pas besoin de timer d'abandon
             return
           }
 
           // Vérifier si c'est un abandon volontaire (bouton Abandonner)
           if (socket.data.voluntaryAbandon) {
-            console.log(`[DISCONNECT] ${playerName} a abandonné volontairement, pas de délai de grâce`)
             // Pas de timer de grâce pour un abandon volontaire
             return
           }
@@ -82,8 +75,6 @@ export function setupDisconnectHandlers(
           const userId = socket.data.userId
           
           if (userId) {
-            console.log(`[DISCONNECT] ${playerName} s'est déconnecté, délai de grâce de 60s`)
-            
             // Notifier les autres joueurs de la déconnexion temporaire
             io.to(roomId).emit('system_message', `${playerName} s'est déconnecté (60s pour revenir)`)
             
@@ -91,8 +82,6 @@ export function setupDisconnectHandlers(
             
             // Créer un timer pour l'abandon après 60 secondes
             const abandonTimer = setTimeout(async () => {
-              console.log(`[DISCONNECT] Timer expiré pour ${playerName} dans ${roomId}`)
-              
               // Récupérer le gameState AVANT de retirer le joueur pour sauvegarder ses stats
               const gameBeforeRemoval = getGameState(roomId)
               
@@ -125,8 +114,6 @@ export function setupDisconnectHandlers(
                   
                   if (!result.success) {
                     console.error(`[STATS] Erreur sauvegarde stats d'abandon (déconnexion):`, result.error)
-                  } else {
-                    console.log(`[STATS] ${playerName} a perdu ${xpLoss} XP (niveau ${currentLevel}) suite à l'abandon par déconnexion`)
                   }
                 }
               }
@@ -139,7 +126,6 @@ export function setupDisconnectHandlers(
               
               if (!updatedGame) {
                 // Plus de joueurs, partie annulée
-                console.log('[DISCONNECT] Plus aucun joueur dans la partie')
                 roomStates.delete(roomId)
               } else if (updatedGame.gameStatus === 'finished') {
                 // Un seul joueur reste, il gagne
@@ -173,7 +159,6 @@ export function setupDisconnectHandlers(
                   message: `${updatedGame.winner} remporte la partie par abandon !`,
                 })
                 roomStates.delete(roomId)
-                console.log(`[DISCONNECT] Partie ${roomId} terminée par abandon`)
               } else {
                 // 2+ joueurs restent, continuer
                 // Compter les joueurs actifs (non-abandonnés)
@@ -188,7 +173,6 @@ export function setupDisconnectHandlers(
                 
                 const currentPlayer = updatedGame.players[updatedGame.currentPlayerIndex]
                 io.to(roomId).emit('system_message', `C'est au tour de ${currentPlayer.name}`)
-                console.log(`[DISCONNECT] Partie continue, tour de ${currentPlayer.name}`)
               }
               
               // Nettoyer le timer
@@ -200,12 +184,8 @@ export function setupDisconnectHandlers(
           }
         } else {
           // Salle d'attente : simple notification
-          console.log(`[DISCONNECT] ${playerName} quitte la salle d'attente ${roomId}`)
-          
           // Envoyer le message AVANT de récupérer la nouvelle liste
-          console.log(`[DISCONNECT] Envoi du message de déconnexion à la room: ${roomId}`)
           io.to(roomId).emit('system_message', `${playerName} s'est déconnecté`)
-          console.log(`[DISCONNECT] Message envoyé`)
           
           const room = io.sockets.adapter.rooms.get(roomId)
           const socketsInRoom = room ? Array.from(room) : []
@@ -222,8 +202,6 @@ export function setupDisconnectHandlers(
             players,
             started: false,
           })
-          
-          console.log(`[DISCONNECT] ${players.length} joueur(s) restant(s) dans ${roomId}`)
         }
       }
     })

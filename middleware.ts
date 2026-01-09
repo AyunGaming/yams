@@ -19,15 +19,6 @@ export async function middleware(request: NextRequest) {
   // Routes protégées
   const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/game/')
 
-  // Logger pour le débogage
-  if (isProtectedRoute) {
-    console.log(`🔐 Accès à une route protégée: ${pathname}`)
-  }
-
-  if (isAuthPage) {
-    console.log(`🔓 Accès à une page d'authentification: ${pathname}`)
-  }
-
   // Laisser passer toutes les requêtes
   // La vérification d'authentification est gérée côté client dans Providers.tsx
   return NextResponse.next()
