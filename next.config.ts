@@ -15,9 +15,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
 
-  experimental: {
-    serverComponentsExternalPackages: ['mjml'],
-  },
+  serverExternalPackages: ['mjml'],
 
   images: {
     remotePatterns: [
